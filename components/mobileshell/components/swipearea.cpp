@@ -309,6 +309,9 @@ void SwipeArea::handleReleaseEvent(QPointerEvent *event, QPointF point)
     // if we are in a swipe
     if (m_moving) {
         Q_EMIT swipeEnded();
+    } else if (m_pressed) {
+        // No swipe occurred — this was a click/tap
+        Q_EMIT clicked();
     }
 
     resetSwipe();
