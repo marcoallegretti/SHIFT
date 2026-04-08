@@ -20,9 +20,18 @@ MouseArea {
     readonly property real verticalMargin: Math.round((folio.HomeScreenState.pageHeight - folio.HomeScreenState.pageContentHeight) / 2)
     readonly property real horizontalMargin: Math.round((folio.HomeScreenState.pageWidth - folio.HomeScreenState.pageContentWidth) / 2)
 
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
     onPressAndHold: {
         folio.HomeScreenState.openSettingsView()
         haptics.buttonVibrate();
+    }
+
+    onClicked: (mouse) => {
+        // Right-click opens settings view (wallpaper/widgets), same as long-press
+        if (mouse.button === Qt.RightButton) {
+            folio.HomeScreenState.openSettingsView();
+        }
     }
 
     onDoubleClicked: {

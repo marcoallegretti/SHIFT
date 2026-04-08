@@ -23,9 +23,18 @@ MouseArea {
 
     signal delegateDragRequested(var item)
 
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
     onPressAndHold: {
         folio.HomeScreenState.openSettingsView();
         haptics.buttonVibrate();
+    }
+
+    onClicked: (mouse) => {
+        // Right-click opens settings view (wallpaper/widgets), same as long-press
+        if (mouse.button === Qt.RightButton) {
+            folio.HomeScreenState.openSettingsView();
+        }
     }
 
     onDoubleClicked: {
