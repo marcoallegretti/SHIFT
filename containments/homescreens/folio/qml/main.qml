@@ -94,7 +94,7 @@ ContainmentItem {
         } else { // If we are already on the homescreen
             switch (folio.HomeScreenState.viewState) {
                 case Folio.HomeScreenState.PageView:
-                    if (folio.HomeScreenState.currentPage === 0) {
+                    if (ShellSettings.Settings.convergenceModeEnabled || folio.HomeScreenState.currentPage === 0) {
                         folio.HomeScreenState.openAppDrawer();
                     } else {
                         folio.HomeScreenState.goToPage(0, false);
