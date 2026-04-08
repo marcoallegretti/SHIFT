@@ -38,6 +38,7 @@ Item {
     // Convergence mode: show running-app task strip
     property bool convergenceMode: false
     property var taskModel: null
+    property var virtualDesktopInfo: null
 
     // drop shadow for icons
     MultiEffect {
@@ -176,6 +177,17 @@ Item {
                 Controls.Menu {
                     id: taskContextMenu
                     Controls.MenuItem {
+                        text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                        icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
+                        onTriggered: root.taskModel.requestToggleMinimized(root.taskModel.makeModelIndex(taskDelegate.index))
+                    }
+                    Controls.MenuItem {
+                        text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
+                        icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
+                        onTriggered: root.taskModel.requestToggleMaximized(root.taskModel.makeModelIndex(taskDelegate.index))
+                    }
+                    Controls.MenuSeparator {}
+                    Controls.MenuItem {
                         text: i18n("Close")
                         icon.name: "window-close"
                         onTriggered: root.taskModel.requestClose(root.taskModel.makeModelIndex(taskDelegate.index))
@@ -192,6 +204,43 @@ Item {
                     radius: width / 2
                     color: Kirigami.Theme.highlightColor
                     visible: taskDelegate.model.IsActive === true
+                }
+            }
+        }
+
+        // Virtual desktop switcher (convergence mode, multiple desktops)
+        Row {
+            id: workspaceIndicator
+            visible: root.convergenceMode && root.virtualDesktopInfo !== null && root.virtualDesktopInfo.numberOfDesktops > 1
+            spacing: Kirigami.Units.smallSpacing / 2
+
+            Repeater {
+                model: root.virtualDesktopInfo ? root.virtualDesktopInfo.desktopIds : []
+
+                delegate: Rectangle {
+                    required property int index
+                    required property var modelData
+                    width: Kirigami.Units.gridUnit * 1.5
+                    height: width
+                    radius: Kirigami.Units.smallSpacing
+
+                    color: modelData === root.virtualDesktopInfo.currentDesktop
+                           ? Kirigami.Theme.highlightColor
+                           : Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: index + 1
+                        color: parent.modelData === root.virtualDesktopInfo.currentDesktop
+                               ? Kirigami.Theme.highlightedTextColor
+                               : Kirigami.Theme.textColor
+                        font.pixelSize: parent.height * 0.6
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: root.virtualDesktopInfo.requestActivate(parent.modelData)
+                    }
                 }
             }
         }
@@ -277,6 +326,14 @@ Item {
                 // Fill space between leftCorner (bottom) and the nav button group
                 height: taskStrip.visible ? (leftButton.y - leftCornerButton.y - leftCornerButton.height - Kirigami.Units.smallSpacing * 2) : 0
             }
+            // Workspace indicator: vertical — above rightCornerButton (top)
+            AnchorChanges {
+                target: workspaceIndicator
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    top: rightCornerButton.bottom
+                }
+            }
         }, State {
             name: "horizontal"
             when: !root.isVertical
@@ -353,6 +410,14 @@ Item {
             PropertyChanges {
                 target: taskStrip
                 height: parent.height
+            }
+            // Workspace indicator: horizontal — between rightButton and rightCornerButton
+            AnchorChanges {
+                target: workspaceIndicator
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    left: rightButton.right
+                }
             }
         }
     ]

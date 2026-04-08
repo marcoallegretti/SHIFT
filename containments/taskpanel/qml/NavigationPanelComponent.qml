@@ -38,6 +38,7 @@ MobileShell.NavigationPanel {
     // Convergence mode: expose running-app task strip
     convergenceMode: ShellSettings.Settings.convergenceModeEnabled
     taskModel: tasksModel
+    virtualDesktopInfo: virtualDesktopInfo
 
     MobileShellState.PanelSettingsDBusClient {
         id: panelSettings
