@@ -12,7 +12,9 @@ target_link_libraries(waydroidhelper
 
 install(TARGETS waydroidhelper DESTINATION ${KAUTH_HELPER_INSTALL_DIR})
 
-find_package(KF6Auth NO_MODULE)
+if(NOT TARGET KF6::AuthCore)
+    find_package(KF6Auth NO_MODULE REQUIRED)
+endif()
 
 kauth_install_helper_files(waydroidhelper org.kde.plasma.mobileshell.waydroidhelper root)
 kauth_install_actions(org.kde.plasma.mobileshell.waydroidhelper waydroidhelper.actions)

@@ -18,6 +18,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(INSTALL_SYSTEMD_SERVICE "Install a systemd service file to start the session" OFF)
+option(PLASMA_MOBILE_LOCAL_KAUTH_INSTALL "Install KAuth helpers and policies into CMAKE_INSTALL_PREFIX for local rootless development" OFF)
 
 find_package(ECM ${KF6_MIN_VERSION} REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
@@ -123,6 +124,13 @@ set_package_properties(KF6::AuthCore PROPERTIES
     TYPE REQUIRED
     PURPOSE "Allows Plasma Mobile to configure Waydroid"
 )
+
+if(PLASMA_MOBILE_LOCAL_KAUTH_INSTALL)
+    set(KAUTH_HELPER_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/kf6/kauth")
+    set(KAUTH_HELPER_INSTALL_ABSOLUTE_DIR "${KAUTH_HELPER_INSTALL_DIR}")
+    set(KAUTH_POLICY_FILES_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/polkit-1/actions")
+    set(INSTALL_BROKEN_KAUTH_POLICY_FILES ON)
+endif()
 
 include(CheckIncludeFiles)
 
