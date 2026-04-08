@@ -81,6 +81,9 @@ ContainmentItem {
                 folio.HomeScreenState.goToPage(0, false);
 
                 WindowPlugin.WindowUtil.minimizeAll();
+            } else {
+                // In convergence mode, toggle "show desktop" (minimize all to reveal homescreen)
+                WindowPlugin.WindowUtil.minimizeAll();
             }
 
             // Always ensure settings view is closed
