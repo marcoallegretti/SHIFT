@@ -64,8 +64,12 @@ Item {
     }
 
     // Status bar component
+    // z: 1 so system tray icon MouseAreas inside StatusBar receive events
+    // before ActionDrawerOpenSurface (z: default). Non-interactive areas
+    // pass through to the swipe surface below.
     StatusBarWrapper {
         id: statusBarWrapper
+        z: 1
         anchors.fill: parent
 
         statusPanelHeight: MobileShell.Constants.topPanelHeight
@@ -112,6 +116,20 @@ Item {
                 if (statusBarWrapper.state == "visible") {
                     MobileShellState.ShellDBusClient.panelState = "hidden";
                 }
+            }
+        }
+    }
+
+    // Keyboard shortcut to toggle action drawer (convergence mode)
+    Shortcut {
+        sequence: "Meta+A"
+        enabled: ShellSettings.Settings.convergenceModeEnabled
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            if (drawer.actionDrawer.intendedToBeVisible) {
+                drawer.actionDrawer.close();
+            } else {
+                drawer.actionDrawer.open();
             }
         }
     }

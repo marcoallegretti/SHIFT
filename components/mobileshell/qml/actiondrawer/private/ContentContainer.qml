@@ -269,6 +269,9 @@ Item {
         showDropShadow: false
         showTime: root.actionDrawer.mode == MobileShell.ActionDrawer.Portrait
 
+        // Disable system tray on lockscreen to prevent SIGABRT
+        disableSystemTray: root.actionDrawer.restrictedPermissions
+
         opacity: brightnessPressedValue
     }
 

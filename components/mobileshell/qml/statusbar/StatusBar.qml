@@ -46,6 +46,11 @@ Item {
      */
     property bool showTime: true
 
+    /**
+     * Whether to disable the system tray (e.g. on the lockscreen to prevent SIGABRT).
+     */
+    property bool disableSystemTray: false
+
     readonly property real textPixelSize: Math.round(11 * ShellSettings.Settings.statusBarScaleFactor)
     readonly property real smallerTextPixelSize: Math.round(9 * ShellSettings.Settings.statusBarScaleFactor)
     readonly property real elementSpacing: Math.round(Kirigami.Units.smallSpacing * 1.5)
@@ -152,6 +157,21 @@ Item {
                         textPixelSize: root.textPixelSize
                         implicitHeight: mainRow.rowHeight
                         Layout.preferredWidth: height
+                    }
+
+                    // System tray icons (convergence mode only)
+                    Loader {
+                        id: statusNotifierSourceLoader
+                        active: ShellSettings.Settings.convergenceModeEnabled && !root.disableSystemTray
+                        sourceComponent: SystemTray.StatusNotifierModel {}
+                    }
+
+                    Repeater {
+                        id: statusNotifierRepeater
+                        model: statusNotifierSourceLoader.item
+                        delegate: TaskWidget {
+                            Layout.leftMargin: root.elementSpacing
+                        }
                     }
                 }
             }
