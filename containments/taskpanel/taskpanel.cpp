@@ -31,4 +31,11 @@ void TaskPanel::triggerTaskSwitcher() const
     QDBusConnection::sessionBus().send(message);
 }
 
+void TaskPanel::triggerOverview() const
+{
+    QDBusMessage message = QDBusMessage::createMethodCall("org.kde.kglobalaccel", "/component/kwin", "org.kde.kglobalaccel.Component", "invokeShortcut");
+    message.setArguments({QStringLiteral("Overview")});
+    QDBusConnection::sessionBus().send(message);
+}
+
 #include "taskpanel.moc"

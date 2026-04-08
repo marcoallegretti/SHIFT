@@ -35,6 +35,10 @@ MobileShell.NavigationPanel {
     foregroundColorGroup: forcedComplementary ? Kirigami.Theme.Complementary : Kirigami.Theme.Window
     shadow: forcedComplementary
 
+    // Convergence mode: expose running-app task strip
+    convergenceMode: ShellSettings.Settings.convergenceModeEnabled
+    taskModel: tasksModel
+
     MobileShellState.PanelSettingsDBusClient {
         id: panelSettings
         screenName: Screen.name
@@ -68,16 +72,20 @@ MobileShell.NavigationPanel {
     // ~~~~
     // navigation panel actions
 
-    // toggle task switcher button
+    // toggle task switcher button (KWin Overview in convergence mode, mobile task switcher otherwise)
     leftAction: MobileShell.NavigationPanelAction {
         id: taskSwitcherAction
 
         enabled: true
-        iconSource: "mobile-task-switcher"
-        shrinkSize: 4
+        iconSource: ShellSettings.Settings.convergenceModeEnabled ? "view-grid-symbolic" : "mobile-task-switcher"
+        shrinkSize: ShellSettings.Settings.convergenceModeEnabled ? 0 : 4
 
         onTriggered: {
-            Plasmoid.triggerTaskSwitcher();
+            if (ShellSettings.Settings.convergenceModeEnabled) {
+                Plasmoid.triggerOverview();
+            } else {
+                Plasmoid.triggerTaskSwitcher();
+            }
         }
     }
 

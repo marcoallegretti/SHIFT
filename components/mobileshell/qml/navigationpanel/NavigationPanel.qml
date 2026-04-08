@@ -9,6 +9,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 import QtQuick.Effects
+import QtQuick.Controls as Controls
 
 import org.kde.kirigami as Kirigami
 import org.kde.taskmanager 0.1 as TaskManager
@@ -33,6 +34,10 @@ Item {
     property real rightPadding: 0
 
     property bool isVertical: false
+
+    // Convergence mode: show running-app task strip
+    property bool convergenceMode: false
+    property var taskModel: null
 
     // drop shadow for icons
     MultiEffect {
@@ -133,6 +138,63 @@ Item {
                 }
             }
         }
+
+        // Running-app task strip for convergence (desktop) mode
+        ListView {
+            id: taskStrip
+            visible: root.convergenceMode && root.taskModel !== null && root.taskModel.count > 0
+            orientation: root.isVertical ? ListView.Vertical : ListView.Horizontal
+            spacing: Kirigami.Units.smallSpacing
+            clip: true
+            interactive: contentWidth > width
+            model: root.taskModel
+
+            delegate: NavigationPanelButton {
+                id: taskDelegate
+                required property int index
+                required property var model
+                width: taskStrip.orientation === ListView.Horizontal ? height : taskStrip.width
+                height: taskStrip.orientation === ListView.Horizontal ? taskStrip.height : taskStrip.width
+
+                Kirigami.Theme.colorSet: root.foregroundColorGroup
+                Kirigami.Theme.inherit: false
+                iconSource: taskDelegate.model.decoration
+                enabled: true
+                shrinkSize: 0
+
+                onClicked: {
+                    root.taskModel.requestActivate(root.taskModel.makeModelIndex(taskDelegate.index));
+                }
+
+                // Right-click context menu
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: taskContextMenu.popup()
+                }
+
+                Controls.Menu {
+                    id: taskContextMenu
+                    Controls.MenuItem {
+                        text: i18n("Close")
+                        icon.name: "window-close"
+                        onTriggered: root.taskModel.requestClose(root.taskModel.makeModelIndex(taskDelegate.index))
+                    }
+                }
+
+                // Active-window indicator dot
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottomMargin: Kirigami.Units.smallSpacing / 2
+                    width: Kirigami.Units.smallSpacing * 2
+                    height: width
+                    radius: width / 2
+                    color: Kirigami.Theme.highlightColor
+                    visible: taskDelegate.model.IsActive === true
+                }
+            }
+        }
     }
 
     states: [
@@ -200,6 +262,21 @@ Item {
                 height: Kirigami.Units.gridUnit * 2
                 width: icons.width
             }
+            // Task strip: vertical layout — positioned between leftCornerButton (bottom) and leftButton (above middle)
+            AnchorChanges {
+                target: taskStrip
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    bottom: leftButton.top
+                    top: undefined
+                }
+            }
+            PropertyChanges {
+                target: taskStrip
+                width: parent.width
+                // Fill space between leftCorner (bottom) and the nav button group
+                height: taskStrip.visible ? (leftButton.y - leftCornerButton.y - leftCornerButton.height - Kirigami.Units.smallSpacing * 2) : 0
+            }
         }, State {
             name: "horizontal"
             when: !root.isVertical
@@ -263,6 +340,19 @@ Item {
                 target: leftCornerButton
                 height: parent.height
                 width: Kirigami.Units.gridUnit * 2
+            }
+            // Task strip: horizontal layout — positioned between leftCornerButton (left) and leftButton (near center)
+            AnchorChanges {
+                target: taskStrip
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    left: leftCornerButton.right
+                    right: leftButton.left
+                }
+            }
+            PropertyChanges {
+                target: taskStrip
+                height: parent.height
             }
         }
     ]

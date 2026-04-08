@@ -15,4 +15,5 @@ class TaskPanel : public Plasma::Containment
 public:
     TaskPanel(QObject *parent, const KPluginMetaData &data, const QVariantList &args);
     Q_INVOKABLE void triggerTaskSwitcher() const;
+    Q_INVOKABLE void triggerOverview() const;
 };

@@ -56,6 +56,7 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo
                  {"blurEnabled", false}, // disable blur for performance reasons, we could reconsider in the future for more powerful devices
                  {"convergentwindowsEnabled", true}, // enable our convergent window plugin
                  {"mobiletaskswitcherEnabled", true}, // ensure the mobile task switcher plugin is enabled
+                 {"overviewEnabled", convergenceModeEnabled}, // enable KWin Overview effect in convergence mode for desktop-style task switching
                  {"screenedgeEnabled", false} // disable the blue highlighting of screen edge effects. TODO would be nice if we could only deactivate it on
                                               // touchscreen gestures and not mouse as well
              }},
@@ -76,7 +77,7 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo
 
 // Have a separate list here because we need to trigger DBus calls to load/unload each effect/script.
 // Make sure that the effect/script is added to the kwinrc "Plugins" section above!
-const QList<QString> KWIN_EFFECTS = {"blur", "mobiletaskswitcher", "screenedge"};
+const QList<QString> KWIN_EFFECTS = {"blur", "mobiletaskswitcher", "overview", "screenedge"};
 const QList<QString> KWIN_SCRIPTS = {"convergentwindows"};
 
 // .config/plasma-mobile/ksmserver - immutable settings:
