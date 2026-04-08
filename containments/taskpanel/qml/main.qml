@@ -213,9 +213,10 @@ ContainmentItem {
         }
 
         // load appropriate system navigation component
+        // In convergence mode, always use the button navigation panel (gesture-only mode is hostile to mouse/keyboard)
         Loader {
             anchors.fill: parent
-            sourceComponent: ShellSettings.Settings.navigationPanelEnabled ? navigationPanelComponent : gesturePanelComponent
+            sourceComponent: (ShellSettings.Settings.navigationPanelEnabled || ShellSettings.Settings.convergenceModeEnabled) ? navigationPanelComponent : gesturePanelComponent
         }
 
         state: MobileShellState.ShellDBusClient.panelState
