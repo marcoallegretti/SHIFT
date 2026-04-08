@@ -62,4 +62,15 @@ MobileShell.SwipeArea {
     onTouchpadScrollStarted: (point) => startSwipeWithPoint(point)
     onTouchpadScrollEnded: endSwipe()
     onTouchpadScrollMove: (totalDeltaX, totalDeltaY, deltaX, deltaY) => updateOffset(deltaY);
+
+    // In convergence mode, allow click to toggle the action drawer (mouse-friendly)
+    onClicked: {
+        if (ShellSettings.Settings.convergenceModeEnabled) {
+            if (actionDrawer.intendedToBeVisible) {
+                actionDrawer.close();
+            } else {
+                actionDrawer.open();
+            }
+        }
+    }
 }
