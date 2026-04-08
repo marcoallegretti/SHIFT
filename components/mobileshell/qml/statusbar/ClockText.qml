@@ -34,7 +34,7 @@ RowLayout {
 
     PlasmaComponents.Label {
         id: date
-        visible: ShellSettings.Settings.dateInStatusBar && !root.showSecondRow
+        visible: (ShellSettings.Settings.dateInStatusBar || ShellSettings.Settings.convergenceModeEnabled) && !root.showSecondRow
 
         text: Qt.formatDate(clockSource.dateTime, "ddd. MMMM d")
         color: Kirigami.Theme.textColor
