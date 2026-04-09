@@ -12,6 +12,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell as MobileShell
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
 import "./delegate"
@@ -346,8 +347,8 @@ Item {
                     visible: opacity > 0
 
                     // one is ignored as anchors are set
-                    height: Kirigami.Units.gridUnit * 6
-                    width: Kirigami.Units.gridUnit * 6
+                    height: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
+                    width: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
 
                     anchors.topMargin: root.topMargin
                     anchors.bottomMargin: root.bottomMargin
@@ -403,7 +404,7 @@ Item {
                             }
                             PropertyChanges {
                                 target: favouritesBar
-                                height: Kirigami.Units.gridUnit * 6
+                                height: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
                             }
                         }, State {
                             name: "left"
@@ -467,11 +468,12 @@ Item {
                         count: folio.PageListModel.length
 
                         TapHandler {
+                            enabled: !ShellSettings.Settings.convergenceModeEnabled
                             onTapped: folio.HomeScreenState.openAppDrawer()
                         }
                     }
 
-                    // show arrow to open app drawer when there is 1 page
+                    // show arrow to open app drawer when there is 1 page (hidden in convergence mode)
                     Kirigami.Icon {
                         source: 'arrow-up'
                         Kirigami.Theme.inherit: false
@@ -480,7 +482,7 @@ Item {
                         implicitHeight: Kirigami.Units.iconSizes.small
                         implicitWidth: Kirigami.Units.iconSizes.small
 
-                        visible: folio.PageListModel.length <= 1
+                        visible: folio.PageListModel.length <= 1 && !ShellSettings.Settings.convergenceModeEnabled
 
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
