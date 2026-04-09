@@ -88,6 +88,17 @@ Item {
         background: Rectangle {
             id: panelBackground
             color: backgroundColor
+
+            // Hover highlight in convergence mode to indicate the bar is clickable
+            Rectangle {
+                anchors.fill: parent
+                color: Qt.rgba(255, 255, 255, 0.1)
+                visible: ShellSettings.Settings.convergenceModeEnabled && statusBarHover.hovered
+            }
+
+            HoverHandler {
+                id: statusBarHover
+            }
         }
 
         contentItem: ColumnLayout {
