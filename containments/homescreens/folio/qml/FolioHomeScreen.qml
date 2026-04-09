@@ -351,7 +351,7 @@ Item {
                     width: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
 
                     anchors.topMargin: root.topMargin
-                    anchors.bottomMargin: root.bottomMargin
+                    anchors.bottomMargin: ShellSettings.Settings.convergenceModeEnabled ? 0 : root.bottomMargin
                     anchors.leftMargin: root.leftMargin
                     anchors.rightMargin: root.rightMargin
 

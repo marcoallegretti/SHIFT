@@ -86,7 +86,10 @@ ContainmentItem {
             root.panel.offset = intendedWindowOffset;
             root.panel.thickness = navigationPanelHeight;
             root.panel.location = intendedWindowLocation;
-            root.panel.visibilityMode = ShellSettings.Settings.autoHidePanelsEnabled ? 3 : 0;
+            // In convergence mode the navigation panel is invisible (its functions
+            // live in the dock), so auto-hide the panel window to avoid reserving
+            // empty screen space at the bottom edge.
+            root.panel.visibilityMode = (ShellSettings.Settings.autoHidePanelsEnabled || ShellSettings.Settings.convergenceModeEnabled) ? 3 : 0;
             MobileShell.ShellUtil.setWindowLayer(root.panel, LayerShell.Window.LayerOverlay);
             root.updateTouchArea();
         }
