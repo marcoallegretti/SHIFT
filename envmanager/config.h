@@ -57,8 +57,7 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo
                  {"convergentwindowsEnabled", true}, // enable our convergent window plugin
                  {"mobiletaskswitcherEnabled", true}, // ensure the mobile task switcher plugin is enabled
                  {"overviewEnabled", convergenceModeEnabled}, // enable KWin Overview effect in convergence mode for desktop-style task switching
-                 {"screenedgeEnabled", false} // disable the blue highlighting of screen edge effects. TODO would be nice if we could only deactivate it on
-                                              // touchscreen gestures and not mouse as well
+                 {"screenedgeEnabled", convergenceModeEnabled} // enable screen edge visual feedback in convergence mode (mouse hot corners)
              }},
             {"Wayland",
              {
