@@ -197,6 +197,8 @@ Item {
                 sourceComponent: PageIndicator {
                     count: swipeView.count
                     currentIndex: swipeView.currentIndex
+                    interactive: true
+                    onCurrentIndexChanged: swipeView.currentIndex = currentIndex
 
                     delegate: Rectangle {
                         implicitWidth: 8
