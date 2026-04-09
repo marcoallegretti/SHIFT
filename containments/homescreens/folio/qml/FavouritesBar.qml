@@ -7,9 +7,12 @@ import QtQuick.Layouts 1.1
 
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell.state as MobileShellState
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+import org.kde.taskmanager as TaskManager
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.kirigami as Kirigami
+import QtQuick.Controls as Controls
 
 import "./private"
 import "./delegate"
@@ -22,6 +25,88 @@ MouseArea {
     property var homeScreen
 
     signal delegateDragRequested(var item)
+
+    // Convergence mode: show running apps alongside favourites
+    readonly property bool convergenceMode: ShellSettings.Settings.convergenceModeEnabled
+    readonly property int totalItemCount: repeater.count + (convergenceMode ? taskRepeater.count : 0)
+
+    // In convergence mode, size icons to fit the dock bar instead of using page grid cells
+    readonly property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
+    readonly property real dockCellHeight: convergenceMode ? root.height : folio.HomeScreenState.pageCellHeight
+
+    // Navigation buttons width (used to offset center positioning)
+    readonly property real navButtonWidth: convergenceMode ? root.height : 0
+
+    // Center x for dock items (offset between nav buttons in convergence mode)
+    readonly property real dockCenterX: convergenceMode
+        ? navButtonWidth + (root.width - 2 * navButtonWidth) / 2
+        : root.width / 2
+
+    // Home button (convergence mode, left end)
+    Rectangle {
+        id: homeButton
+        visible: root.convergenceMode
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: root.navButtonWidth
+        color: "transparent"
+
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height) * 0.75
+            height: width
+            source: "start-here-kde"
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: MobileShellState.ShellDBusClient.openHomeScreen()
+        }
+    }
+
+    // Overview button (convergence mode, right end)
+    Rectangle {
+        id: overviewButton
+        visible: root.convergenceMode
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: root.navButtonWidth
+        color: "transparent"
+
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height) * 0.75
+            height: width
+            source: "view-grid-symbolic"
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.folio.triggerOverview()
+        }
+    }
+
+    TaskManager.VirtualDesktopInfo {
+        id: virtualDesktopInfo
+    }
+
+    TaskManager.ActivityInfo {
+        id: activityInfo
+    }
+
+    TaskManager.TasksModel {
+        id: tasksModel
+        filterByVirtualDesktop: true
+        filterByActivity: true
+        filterNotMaximized: false
+        filterByScreen: true
+        filterHidden: true
+        virtualDesktop: virtualDesktopInfo.currentDesktop
+        activity: activityInfo.currentActivity
+        groupMode: TaskManager.TasksModel.GroupDisabled
+    }
 
     acceptedButtons: Qt.LeftButton | Qt.RightButton
 
@@ -83,21 +168,21 @@ MouseArea {
             readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
 
             // get the normalized index position value from the center so we can animate it
-            property double fromCenterValue: model.index - (repeater.count / 2)
+            property double fromCenterValue: model.index - (root.totalItemCount / 2)
             Behavior on fromCenterValue {
                 NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad; }
             }
 
             // multiply the 'fromCenterValue' by the cell size to get the actual position
-            readonly property int centerPosition: (isLocationBottom ? folio.HomeScreenState.pageCellWidth : folio.HomeScreenState.pageCellHeight) * fromCenterValue
+            readonly property int centerPosition: (isLocationBottom ? root.dockCellWidth : root.dockCellHeight) * fromCenterValue
 
-            x: isLocationBottom ? centerPosition + parent.width / 2 : (parent.width - width) / 2
-            y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - folio.HomeScreenState.pageCellHeight
+            x: isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2
+            y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
 
-            implicitWidth: folio.HomeScreenState.pageCellWidth
-            implicitHeight: folio.HomeScreenState.pageCellHeight
-            width: folio.HomeScreenState.pageCellWidth
-            height: folio.HomeScreenState.pageCellHeight
+            implicitWidth: root.dockCellWidth
+            implicitHeight: root.dockCellHeight
+            width: root.dockCellWidth
+            height: root.dockCellHeight
 
             // Keyboard navigation to other delegates
             Keys.onPressed: (event) => {
@@ -170,8 +255,8 @@ MouseArea {
                 PlaceholderDelegate {
                     id: dragDropFeedback
                     folio: root.folio
-                    width: folio.HomeScreenState.pageCellWidth
-                    height: folio.HomeScreenState.pageCellHeight
+                    width: root.dockCellWidth
+                    height: root.dockCellHeight
                 }
             }
 
@@ -324,6 +409,90 @@ MouseArea {
                             onAccepted: folio.FavouritesModel.removeEntry(delegate.index)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Running-app task icons (convergence mode only)
+    Repeater {
+        id: taskRepeater
+        model: root.convergenceMode ? tasksModel : null
+
+        delegate: Item {
+            id: taskDelegate
+
+            required property int index
+            required property var model
+
+            readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
+
+            // Position after all favourites
+            property double fromCenterValue: (repeater.count + taskDelegate.index) - (root.totalItemCount / 2)
+            Behavior on fromCenterValue {
+                NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad; }
+            }
+
+            readonly property int centerPosition: (isLocationBottom ? root.dockCellWidth : root.dockCellHeight) * fromCenterValue
+
+            x: isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2
+            y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
+
+            implicitWidth: root.dockCellWidth
+            implicitHeight: root.dockCellHeight
+            width: root.dockCellWidth
+            height: root.dockCellHeight
+
+            // Task icon
+            Kirigami.Icon {
+                anchors.centerIn: parent
+                width: Math.min(parent.width, parent.height) * 0.6
+                height: width
+                source: taskDelegate.model.decoration
+            }
+
+            // Active-window indicator dot
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottomMargin: Kirigami.Units.smallSpacing / 2
+                width: Kirigami.Units.smallSpacing * 2
+                height: width
+                radius: width / 2
+                color: Kirigami.Theme.highlightColor
+                visible: taskDelegate.model.IsActive === true
+            }
+
+            // Click to activate
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton) {
+                        taskContextMenu.popup();
+                    } else {
+                        tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
+                    }
+                }
+            }
+
+            Controls.Menu {
+                id: taskContextMenu
+                Controls.MenuItem {
+                    text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                    icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
+                    onTriggered: tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                Controls.MenuItem {
+                    text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
+                    icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
+                    onTriggered: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                Controls.MenuSeparator {}
+                Controls.MenuItem {
+                    text: i18n("Close")
+                    icon.name: "window-close"
+                    onTriggered: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
                 }
             }
         }

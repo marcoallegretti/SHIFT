@@ -6,6 +6,8 @@
 
 #include <KWindowSystem>
 
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <QDebug>
 #include <QQmlEngine>
 #include <QQmlExtensionPlugin>
@@ -85,6 +87,13 @@ FavouritesModel *HomeScreen::favouritesModel()
 PageListModel *HomeScreen::pageListModel()
 {
     return m_pageListModel;
+}
+
+void HomeScreen::triggerOverview() const
+{
+    QDBusMessage message = QDBusMessage::createMethodCall("org.kde.kglobalaccel", "/component/kwin", "org.kde.kglobalaccel.Component", "invokeShortcut");
+    message.setArguments({QStringLiteral("Overview")});
+    QDBusConnection::sessionBus().send(message);
 }
 
 #include "homescreen.moc"

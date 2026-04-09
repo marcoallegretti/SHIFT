@@ -78,6 +78,7 @@ target_link_libraries(org.kde.plasma.mobile.homescreen.folio PRIVATE
     Qt::Gui
     Qt::Qml
     Qt::Quick
+    Qt::DBus
     Plasma::Plasma
     Plasma::PlasmaQuick
     KF6::I18n

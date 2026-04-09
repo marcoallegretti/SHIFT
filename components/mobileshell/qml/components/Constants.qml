@@ -27,7 +27,9 @@ QtObject {
         return root.panelSettings.statusBarHeight;
     }
 
-    readonly property real defaultNavigationPanelThickness: Kirigami.Units.gridUnit * 2
+    readonly property real defaultNavigationPanelThickness: ShellSettings.Settings.convergenceModeEnabled
+        ? 0
+        : Kirigami.Units.gridUnit * 2
     readonly property real defaultGesturePanelThickness: Kirigami.Units.gridUnit
 
     readonly property real navigationPanelThickness: {

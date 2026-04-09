@@ -141,9 +141,10 @@ Item {
         }
 
         // Running-app task strip for convergence (desktop) mode
+        // NOTE: Disabled — running apps now shown in FavouritesBar dock
         ListView {
             id: taskStrip
-            visible: root.convergenceMode && root.taskModel !== null && root.taskModel.count > 0
+            visible: false
             orientation: root.isVertical ? ListView.Vertical : ListView.Horizontal
             spacing: Kirigami.Units.smallSpacing
             clip: true
@@ -333,6 +334,79 @@ Item {
                     horizontalCenter: parent.horizontalCenter
                     top: rightCornerButton.bottom
                 }
+            }
+        }, State {
+            name: "convergence-horizontal"
+            when: !root.isVertical && root.convergenceMode
+            PropertyChanges {
+                target: icons
+                anchors {
+                    leftMargin: root.leftPadding
+                    rightMargin: root.rightPadding
+                }
+                buttonLength: Math.min(Kirigami.Units.gridUnit * 8, icons.width * 0.7 / 3)
+            }
+            // Home button: far left
+            AnchorChanges {
+                target: middleButton
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    left: parent.left
+                    right: undefined
+                }
+            }
+            PropertyChanges {
+                target: middleButton
+                height: parent.height
+                width: icons.buttonLength
+                anchors.centerIn: undefined
+            }
+            // Overview button: far right
+            AnchorChanges {
+                target: leftButton
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    right: parent.right
+                    left: undefined
+                }
+            }
+            PropertyChanges {
+                target: leftButton
+                height: parent.height
+                width: icons.buttonLength
+            }
+            // Hide close button (already not visible via action)
+            PropertyChanges {
+                target: rightButton
+                height: parent.height
+                width: 0
+                visible: false
+            }
+            // Hide corner buttons in convergence
+            PropertyChanges {
+                target: leftCornerButton
+                width: 0
+                visible: false
+            }
+            PropertyChanges {
+                target: rightCornerButton
+                width: 0
+                visible: false
+            }
+            // Workspace indicator: left of Overview button
+            AnchorChanges {
+                target: workspaceIndicator
+                anchors {
+                    verticalCenter: parent.verticalCenter
+                    right: leftButton.left
+                    left: undefined
+                }
+            }
+            // Task strip hidden
+            PropertyChanges {
+                target: taskStrip
+                height: 0
+                visible: false
             }
         }, State {
             name: "horizontal"

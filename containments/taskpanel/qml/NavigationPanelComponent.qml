@@ -21,6 +21,8 @@ import org.kde.kirigami as Kirigami
 MobileShell.NavigationPanel {
     id: root
 
+    visible: !ShellSettings.Settings.convergenceModeEnabled
+
     // Whether the bar background should be opaque
     required property bool opaqueBar
 
@@ -102,10 +104,11 @@ MobileShell.NavigationPanel {
         }
     }
 
-    // close app/keyboard button
+    // close app/keyboard button (hidden in convergence mode — windows have title bar close buttons)
     rightAction: MobileShell.NavigationPanelAction {
         id: closeAppAction
 
+        visible: !ShellSettings.Settings.convergenceModeEnabled
         enabled: Keyboards.KWinVirtualKeyboard.visible || WindowPlugin.WindowUtil.hasCloseableActiveWindow
         iconSource: Keyboards.KWinVirtualKeyboard.visible ? "go-down-symbolic" : "mobile-close-app"
         // mobile-close-app (from plasma-frameworks) seems to have fewer margins than icons from breeze-icons

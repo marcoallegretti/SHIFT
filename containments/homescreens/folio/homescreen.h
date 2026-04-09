@@ -48,6 +48,8 @@ public:
 
     void configChanged() override;
 
+    Q_INVOKABLE void triggerOverview() const;
+
     FolioSettings *folioSettings();
     HomeScreenState *homeScreenState();
     WidgetsManager *widgetsManager();
