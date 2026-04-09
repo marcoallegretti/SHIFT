@@ -64,6 +64,16 @@ ContainmentItem {
         screenGeometry: Plasmoid.containment.screenGeometry
     }
 
+    // Close app drawer when a new window appears
+    Connections {
+        target: WindowPlugin.WindowUtil
+        function onWindowCreated() {
+            if (folio.HomeScreenState.viewState === Folio.HomeScreenState.AppDrawerView) {
+                folio.HomeScreenState.closeAppDrawer();
+            }
+        }
+    }
+
     function homeAction() {
         const isInWindow = (!WindowPlugin.WindowUtil.isShowingDesktop && windowMaximizedTracker.showingWindow);
 
