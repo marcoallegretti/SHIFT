@@ -342,8 +342,13 @@ MouseArea {
 
                         actions: [
                             Kirigami.Action {
+                                icon.name: delegate.delegateModel.application.icon
+                                text: i18n("Launch")
+                                onTriggered: appDelegate.launchApp()
+                            },
+                            Kirigami.Action {
                                 icon.name: "emblem-favorite"
-                                text: i18n("Remove")
+                                text: i18n("Remove from Dock")
                                 enabled: !folio.FolioSettings.lockLayout
                                 onTriggered: folio.FavouritesModel.removeEntry(delegate.index)
                             }
