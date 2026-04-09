@@ -49,7 +49,9 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo
              {
                  {"BorderlessMaximizedWindows", !convergenceModeEnabled}, // turn off window decorations when not in convergence mode
                  {"Placement", convergenceModeEnabled ? "Centered" : "Maximizing"}, // maximize all windows by default if we aren't in convergence mode
-                 {"InteractiveWindowMoveEnabled", convergenceModeEnabled} // only allow window moving in convergence mode
+                 {"InteractiveWindowMoveEnabled", convergenceModeEnabled}, // only allow window moving in convergence mode
+                 {"ElectricBorderMaximize", convergenceModeEnabled}, // drag to top edge to maximize in convergence mode
+                 {"ElectricBorderTiling", convergenceModeEnabled} // drag to left/right edges to tile half-screen in convergence mode
              }},
             {"Plugins",
              {
