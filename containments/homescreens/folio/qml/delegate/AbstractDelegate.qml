@@ -122,14 +122,13 @@ Folio.DelegateTouchArea {
                 Layout.minimumHeight: folio.FolioSettings.delegateIconSize
                 Layout.preferredHeight: Layout.minimumHeight
 
-                // darken effect when hovered
-                // TODO: removed for now, since hovered property seems to overlap with the touch pressed event
-                // layer {
-                //     enabled: root.hovered
-                //     effect: ColorOverlay {
-                //         color: Qt.rgba(0, 0, 0, 0.3)
-                //     }
-                // }
+                // Hover highlight in convergence mode (disabled for touch to avoid overlap with press)
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Kirigami.Units.cornerRadius
+                    color: Qt.rgba(255, 255, 255, 0.1)
+                    visible: ShellSettings.Settings.convergenceModeEnabled && root.hovered
+                }
             }
 
             DelegateLabel {

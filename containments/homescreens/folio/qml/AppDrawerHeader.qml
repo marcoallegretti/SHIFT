@@ -99,6 +99,10 @@ Item {
             Layout.preferredHeight: Kirigami.Units.iconSizes.medium
             onClicked: folio.HomeScreenState.closeAppDrawer()
 
+            QQC2.ToolTip.text: i18n("Close")
+            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+
             Kirigami.Theme.inherit: false
             Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
         }

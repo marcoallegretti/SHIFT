@@ -50,19 +50,29 @@ MouseArea {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
-        color: "transparent"
+        color: homeMouseArea.containsPress
+            ? Qt.rgba(255, 255, 255, 0.2)
+            : (homeMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+        radius: Kirigami.Units.cornerRadius
 
         Kirigami.Icon {
             anchors.centerIn: parent
             width: Math.min(parent.width, parent.height) * 0.75
             height: width
             source: "start-here-kde"
+            active: homeMouseArea.containsMouse
         }
 
         MouseArea {
+            id: homeMouseArea
             anchors.fill: parent
+            hoverEnabled: true
             onClicked: MobileShellState.ShellDBusClient.openHomeScreen()
         }
+
+        Controls.ToolTip.text: i18n("Home")
+        Controls.ToolTip.visible: homeMouseArea.containsMouse
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
     }
 
     // Overview button (convergence mode, right end)
@@ -73,19 +83,29 @@ MouseArea {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
-        color: "transparent"
+        color: overviewMouseArea.containsPress
+            ? Qt.rgba(255, 255, 255, 0.2)
+            : (overviewMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+        radius: Kirigami.Units.cornerRadius
 
         Kirigami.Icon {
             anchors.centerIn: parent
             width: Math.min(parent.width, parent.height) * 0.75
             height: width
             source: "view-grid-symbolic"
+            active: overviewMouseArea.containsMouse
         }
 
         MouseArea {
+            id: overviewMouseArea
             anchors.fill: parent
+            hoverEnabled: true
             onClicked: root.folio.triggerOverview()
         }
+
+        Controls.ToolTip.text: i18n("Overview")
+        Controls.ToolTip.visible: overviewMouseArea.containsMouse
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
     }
 
     TaskManager.VirtualDesktopInfo {
@@ -443,12 +463,22 @@ MouseArea {
             width: root.dockCellWidth
             height: root.dockCellHeight
 
+            // Hover highlight background
+            Rectangle {
+                anchors.fill: parent
+                radius: Kirigami.Units.cornerRadius
+                color: taskMouseArea.containsPress
+                    ? Qt.rgba(255, 255, 255, 0.2)
+                    : (taskMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+            }
+
             // Task icon
             Kirigami.Icon {
                 anchors.centerIn: parent
                 width: Math.min(parent.width, parent.height) * 0.6
                 height: width
                 source: taskDelegate.model.decoration
+                active: taskMouseArea.containsMouse
             }
 
             // Active-window indicator dot
@@ -465,7 +495,9 @@ MouseArea {
 
             // Click to activate
             MouseArea {
+                id: taskMouseArea
                 anchors.fill: parent
+                hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
@@ -475,6 +507,10 @@ MouseArea {
                     }
                 }
             }
+
+            Controls.ToolTip.text: taskDelegate.model.display || ""
+            Controls.ToolTip.visible: taskMouseArea.containsMouse && (taskDelegate.model.display || "") !== ""
+            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
 
             Controls.Menu {
                 id: taskContextMenu
