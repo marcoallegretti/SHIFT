@@ -191,13 +191,17 @@ Item {
                 id: mainHomeScreen
                 anchors.fill: parent
 
-                // we stop showing halfway through the animation
-                opacity: 1 - Math.max(homeScreenState.appDrawerOpenProgress, homeScreenState.searchWidgetOpenProgress, homeScreenState.folderOpenProgress) * 2
+                // we stop showing halfway through the animation (skip in convergence — desktop stays visible)
+                opacity: ShellSettings.Settings.convergenceModeEnabled
+                    ? 1
+                    : 1 - Math.max(homeScreenState.appDrawerOpenProgress, homeScreenState.searchWidgetOpenProgress, homeScreenState.folderOpenProgress) * 2
                 visible: opacity > 0 // prevent handlers from picking up events
 
                 transform: [
                     Scale {
-                        property real scaleFactor: Math.max(homeScreenState.appDrawerOpenProgress, homeScreenState.searchWidgetOpenProgress)
+                        property real scaleFactor: ShellSettings.Settings.convergenceModeEnabled
+                            ? 0
+                            : Math.max(homeScreenState.appDrawerOpenProgress, homeScreenState.searchWidgetOpenProgress)
                         origin.x: mainHomeScreen.width / 2
                         origin.y: mainHomeScreen.height / 2
                         yScale: 1 - (scaleFactor * 2) * 0.1
@@ -510,12 +514,25 @@ Item {
                 transform: Translate { y: folderView.opacity > 0 ? 0 : folderView.height }
             }
 
+            // Click-to-dismiss overlay for popup drawer in convergence mode
+            MouseArea {
+                anchors.fill: parent
+                visible: ShellSettings.Settings.convergenceModeEnabled && homeScreenState.appDrawerOpenProgress > 0
+                onClicked: folio.HomeScreenState.closeAppDrawer()
+            }
+
             // bottom app drawer
             AppDrawer {
                 id: appDrawer
                 folio: root.folio
-                width: parent.width
-                height: parent.height
+
+                // Convergence: popup above dock; mobile: full-screen
+                property bool isPopup: ShellSettings.Settings.convergenceModeEnabled
+                property real popupWidth: Math.min(Kirigami.Units.gridUnit * 28, parent.width * 0.5)
+                property real popupHeight: Math.min(Kirigami.Units.gridUnit * 32, parent.height * 0.7)
+
+                width: isPopup ? popupWidth : parent.width
+                height: isPopup ? popupHeight : parent.height
 
                 homeScreen: root
 
@@ -525,12 +542,20 @@ Item {
                 // position for animation
                 property real animationY: (1 - homeScreenState.appDrawerOpenProgress) * (Kirigami.Units.gridUnit * 2)
 
-                // move the app drawer out of the way if it is not visible
-                // NOTE: we do this instead of setting visible to false, because
-                //       it doesn't mess with app drag and drop from the app drawer
-                y: (opacity > 0) ? animationY : parent.height
+                // Convergence popup position: above dock, left-aligned
+                property real popupX: root.leftMargin + Kirigami.Units.smallSpacing
+                property real popupY: (opacity > 0)
+                    ? parent.height - favouritesBar.height - popupHeight - Kirigami.Units.smallSpacing + animationY
+                    : parent.height
 
-                headerHeight: Math.round(Kirigami.Units.gridUnit * 4)
+                // Full-screen position
+                property real fullX: 0
+                property real fullY: (opacity > 0) ? animationY : parent.height
+
+                x: isPopup ? popupX : fullX
+                y: isPopup ? popupY : fullY
+
+                headerHeight: Math.round(Kirigami.Units.gridUnit * (appDrawer.isPopup ? 3 : 4))
                 headerItem: AppDrawerHeader {
                     id: appDrawerHeader
                     folio: root.folio
@@ -538,11 +563,11 @@ Item {
                     onReleaseFocusRequested: appDrawer.forceActiveFocus()
                 }
 
-                // Account for panels
-                topPadding: root.topMargin
-                bottomPadding: root.bottomMargin
-                leftPadding: root.leftMargin
-                rightPadding: root.rightMargin
+                // Account for panels (popup handles its own margins)
+                topPadding: appDrawer.isPopup ? 0 : root.topMargin
+                bottomPadding: appDrawer.isPopup ? 0 : root.bottomMargin
+                leftPadding: appDrawer.isPopup ? 0 : root.leftMargin
+                rightPadding: appDrawer.isPopup ? 0 : root.rightMargin
 
                 // Forward keyboard text to the search bar
                 Keys.onPressed: (event) => {

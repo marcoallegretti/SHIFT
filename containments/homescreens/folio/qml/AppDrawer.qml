@@ -10,6 +10,7 @@ import org.kde.plasma.components 3.0 as PC3
 import org.kde.kirigami as Kirigami
 
 import org.kde.plasma.private.mobileshell as MobileShell
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
 import 'private'
@@ -33,6 +34,27 @@ Item {
 
     property alias flickable: appDrawerGrid
 
+    // Convergence popup background
+    readonly property bool isPopup: ShellSettings.Settings.convergenceModeEnabled
+
+    Rectangle {
+        visible: root.isPopup
+        anchors.fill: parent
+        radius: Kirigami.Units.cornerRadius
+        color: Kirigami.Theme.backgroundColor
+        opacity: 0.95
+
+        layer.enabled: true
+        layer.effect: DropShadow {
+            transparentBorder: true
+            horizontalOffset: 0
+            verticalOffset: 2
+            radius: 12
+            samples: 25
+            color: Qt.rgba(0, 0, 0, 0.4)
+        }
+    }
+
     // Keyboard navigation
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
@@ -45,6 +67,7 @@ Item {
     // App drawer container
     Item {
         anchors.fill: parent
+        clip: root.isPopup
 
         anchors.leftMargin: root.leftPadding
         anchors.topMargin: root.topPadding

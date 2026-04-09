@@ -52,7 +52,8 @@ ContainmentItem {
         fullBlur: Math.min(1,
                            Math.max(
                                1 - homeScreen.contentOpacity,
-                               folio.HomeScreenState.appDrawerOpenProgress * 2, // blur faster during swipe
+                               // Convergence: no blur for popup drawer
+                               ShellSettings.Settings.convergenceModeEnabled ? 0 : folio.HomeScreenState.appDrawerOpenProgress * 2,
                                folio.HomeScreenState.searchWidgetOpenProgress * 1.5, // blur faster during swipe
                                folio.HomeScreenState.folderOpenProgress
                            )
@@ -131,7 +132,10 @@ ContainmentItem {
     Rectangle {
         id: appDrawerBackground
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.6)
+        // Convergence: no scrim (popup has own background); mobile: dark scrim
+        color: ShellSettings.Settings.convergenceModeEnabled
+            ? "transparent"
+            : Qt.rgba(0, 0, 0, 0.6)
 
         opacity: folio.HomeScreenState.appDrawerOpenProgress
     }
