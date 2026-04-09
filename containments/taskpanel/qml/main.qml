@@ -86,9 +86,6 @@ ContainmentItem {
             root.panel.offset = intendedWindowOffset;
             root.panel.thickness = navigationPanelHeight;
             root.panel.location = intendedWindowLocation;
-            // In convergence mode the navigation panel is invisible (its functions
-            // live in the dock), so auto-hide the panel window to avoid reserving
-            // empty screen space at the bottom edge.
             root.panel.visibilityMode = (ShellSettings.Settings.autoHidePanelsEnabled || ShellSettings.Settings.convergenceModeEnabled) ? 3 : 0;
             MobileShell.ShellUtil.setWindowLayer(root.panel, LayerShell.Window.LayerOverlay);
             root.updateTouchArea();
@@ -135,9 +132,34 @@ ContainmentItem {
         function onAutoHidePanelsEnabledChanged() {
             root.setWindowProperties();
         }
+
+        function onConvergenceModeEnabledChanged() {
+            root.setWindowProperties();
+        }
     }
 
     Component.onCompleted: setWindowProperties();
+
+    // Invisible layer-shell surface that reserves screen space for the dock
+    // in convergence mode.  Sits at LayerBottom (below windows, above the
+    // desktop) with an exclusive zone equal to the dock height so that KWin
+    // shrinks MaximizeArea accordingly.  Input-transparent so clicks fall
+    // through to the homescreen dock underneath.
+    Window {
+        id: dockSpaceReserver
+        visible: ShellSettings.Settings.convergenceModeEnabled
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
+        // height is set by layer-shell anchoring; provide a fallback.
+        height: Kirigami.Units.gridUnit * 3
+        width: 1 // layer-shell stretches it via AnchorLeft|AnchorRight
+
+        LayerShell.Window.scope: "dock-space"
+        LayerShell.Window.layer: LayerShell.Window.LayerBottom
+        LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
+        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+    }
 
     // only opaque if there are no maximized windows on this screen
     readonly property bool showingStartupFeedback: MobileShellState.ShellDBusObject.startupFeedbackModel.activeWindowIsStartupFeedback && startupFeedbackColorAnimation.visible && windowMaximizedTracker.windowCount === 1
