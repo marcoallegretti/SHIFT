@@ -125,7 +125,7 @@ MouseArea {
         filterByActivity: true
         filterNotMaximized: false
         filterByScreen: true
-        filterHidden: true
+        filterHidden: false
         virtualDesktop: virtualDesktopInfo.currentDesktop
         activity: activityInfo.currentActivity
         groupMode: TaskManager.TasksModel.GroupDisabled
