@@ -17,6 +17,7 @@ plasma_add_applet(org.kde.plasma.mobile.homescreen.folio
         qml/HomeScreenPage.qml
         qml/HomeScreenPages.qml
         qml/main.qml
+        qml/PipeWireThumbnail.qml
         qml/PlaceholderDelegate.qml
         qml/WidgetDragItem.qml
         qml/config.qml

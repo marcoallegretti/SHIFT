@@ -42,6 +42,9 @@ MouseArea {
         ? navButtonWidth + (root.width - 2 * navButtonWidth) / 2
         : root.width / 2
 
+    // Thumbnail popup hover tracking
+    property int hoveredTaskIndex: -1
+
     // Home button (convergence mode, left end)
     Rectangle {
         id: homeButton
@@ -440,6 +443,136 @@ MouseArea {
     }
 
     // Running-app task icons (convergence mode only)
+
+    Timer {
+        id: thumbnailShowTimer
+        interval: Kirigami.Units.toolTipDelay
+        onTriggered: {
+            thumbnailPopup.visible = true
+        }
+    }
+
+    Timer {
+        id: thumbnailHideTimer
+        interval: 300
+        onTriggered: {
+            thumbnailPopup.visible = false
+            root.hoveredTaskIndex = -1
+        }
+    }
+
+    Window {
+        id: thumbnailPopup
+
+        property var targetDelegate: null
+        property string windowTitle: ""
+        property string windowUuid: ""
+        property bool popupHovered: false
+
+        function open() { visible = true }
+        function close() { visible = false }
+        readonly property bool opened: visible
+
+        flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
+        color: "transparent"
+        width: Kirigami.Units.gridUnit * 16
+        height: popupContent.implicitHeight + 2 * Kirigami.Units.smallSpacing
+
+        // Position above the hovered dock icon, in global coordinates
+        x: {
+            if (!targetDelegate) return 0
+            var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
+            return Math.max(0, delegateGlobal.x + (targetDelegate.width - width) / 2)
+        }
+        y: {
+            if (!targetDelegate) return 0
+            var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
+            return delegateGlobal.y - height - Kirigami.Units.smallSpacing
+        }
+
+        onVisibleChanged: {
+            if (!visible) {
+                windowUuid = ""
+                targetDelegate = null
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: Kirigami.Theme.backgroundColor
+            border.color: Qt.rgba(
+                Kirigami.Theme.textColor.r,
+                Kirigami.Theme.textColor.g,
+                Kirigami.Theme.textColor.b, 0.2)
+            border.width: 1
+            radius: Kirigami.Units.cornerRadius
+
+            MouseArea {
+                id: popupHoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+
+                onContainsMouseChanged: {
+                    thumbnailPopup.popupHovered = containsMouse
+                    if (containsMouse) {
+                        thumbnailHideTimer.stop()
+                    } else if (root.hoveredTaskIndex < 0) {
+                        thumbnailHideTimer.restart()
+                    }
+                }
+
+                onClicked: {
+                    if (thumbnailPopup.targetDelegate) {
+                        tasksModel.requestActivate(
+                            tasksModel.makeModelIndex(thumbnailPopup.targetDelegate.index))
+                        thumbnailPopup.close()
+                    }
+                }
+
+                Column {
+                    id: popupContent
+                    anchors.fill: parent
+                    anchors.margins: Kirigami.Units.smallSpacing
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Item {
+                        width: parent.width
+                        height: width * 9 / 16
+
+                        Loader {
+                            id: pipeWireLoader
+                            active: thumbnailPopup.visible
+                                && thumbnailPopup.windowUuid !== ""
+                            anchors.fill: parent
+                            sourceComponent: PipeWireThumbnail {
+                                windowUuid: thumbnailPopup.windowUuid
+                            }
+                        }
+
+                        Kirigami.Icon {
+                            anchors.centerIn: parent
+                            width: Kirigami.Units.iconSizes.huge
+                            height: width
+                            source: thumbnailPopup.targetDelegate
+                                ? thumbnailPopup.targetDelegate.model.decoration
+                                : ""
+                            visible: !pipeWireLoader.item
+                                || !pipeWireLoader.item.hasThumbnail
+                        }
+                    }
+
+                    PC3.Label {
+                        width: parent.width
+                        text: thumbnailPopup.windowTitle
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignHCenter
+                        maximumLineCount: 1
+                    }
+                }
+            }
+        }
+    }
+
     Repeater {
         id: taskRepeater
         model: root.convergenceMode ? tasksModel : null
@@ -498,7 +631,7 @@ MouseArea {
                 visible: taskDelegate.model.IsActive === true
             }
 
-            // Click to activate
+            // Click to activate, hover for thumbnail preview
             MouseArea {
                 id: taskMouseArea
                 anchors.fill: parent
@@ -506,16 +639,34 @@ MouseArea {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
+                        thumbnailPopup.close()
+                        thumbnailShowTimer.stop()
                         taskContextMenu.popup();
                     } else {
+                        thumbnailPopup.close()
                         tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
                     }
                 }
+                onContainsMouseChanged: {
+                    if (containsMouse) {
+                        thumbnailHideTimer.stop()
+                        thumbnailPopup.targetDelegate = taskDelegate
+                        thumbnailPopup.windowTitle = taskDelegate.model.display || ""
+                        var winIds = taskDelegate.model.WinIdList
+                        thumbnailPopup.windowUuid = (winIds && winIds.length > 0) ? winIds[0] : ""
+                        root.hoveredTaskIndex = taskDelegate.index
+                        if (!thumbnailPopup.opened) {
+                            thumbnailShowTimer.restart()
+                        }
+                    } else {
+                        root.hoveredTaskIndex = -1
+                        if (!thumbnailPopup.popupHovered) {
+                            thumbnailShowTimer.stop()
+                            thumbnailHideTimer.restart()
+                        }
+                    }
+                }
             }
-
-            Controls.ToolTip.text: taskDelegate.model.display || ""
-            Controls.ToolTip.visible: taskMouseArea.containsMouse && (taskDelegate.model.display || "") !== ""
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
 
             Controls.Menu {
                 id: taskContextMenu
