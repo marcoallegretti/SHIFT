@@ -517,6 +517,7 @@ Item {
             // Click-to-dismiss overlay for popup drawer in convergence mode
             MouseArea {
                 anchors.fill: parent
+                anchors.bottomMargin: ShellSettings.Settings.convergenceModeEnabled ? favouritesBar.height : 0
                 visible: ShellSettings.Settings.convergenceModeEnabled && homeScreenState.appDrawerOpenProgress > 0
                 onClicked: folio.HomeScreenState.closeAppDrawer()
             }
