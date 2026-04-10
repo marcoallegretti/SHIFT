@@ -3,6 +3,8 @@
 
 import QtQuick
 
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+
 // NOTE: This is a singleton in the mobileshell library, so we need to be careful to
 // make this load as fast as possible (since it may be loaded in other processes ex. lockscreen).
 
@@ -15,6 +17,7 @@ QtObject {
      * Activates an application by storage id if it is already running, or launch the application.
      */
     function launchOrActivateApp(storageId) {
+        const skipActivate = ShellSettings.Settings.convergenceModeEnabled;
 
         // We don't want to import WindowPlugin initially because it has side-effects and slows down initial load.
         // -> only import it if we actually run the function
@@ -25,11 +28,11 @@ QtObject {
 
             QtObject {
                 Component.onCompleted: {
-                    const launched = WindowPlugin.WindowUtil.activateWindowByStorageId("${storageId}");
-
-                    if (!launched) {
-                        MobileShell.ShellUtil.launchApp("${storageId}");
+                    if (!${skipActivate}) {
+                        const launched = WindowPlugin.WindowUtil.activateWindowByStorageId("${storageId}");
+                        if (launched) return;
                     }
+                    MobileShell.ShellUtil.launchApp("${storageId}");
                 }
             }
         `, root, "runSnippet");
