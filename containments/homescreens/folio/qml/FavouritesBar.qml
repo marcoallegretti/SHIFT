@@ -131,6 +131,18 @@ MouseArea {
         groupMode: TaskManager.TasksModel.GroupDisabled
     }
 
+    // Count how many windows share the same AppId as the task at the given index
+    function windowCountForTask(taskIndex) {
+        var appId = tasksModel.data(tasksModel.makeModelIndex(taskIndex), TaskManager.AbstractTasksModel.AppId)
+        if (!appId) return 1
+        var count = 0
+        for (var i = 0; i < tasksModel.rowCount(); i++) {
+            if (tasksModel.data(tasksModel.makeModelIndex(i), TaskManager.AbstractTasksModel.AppId) === appId)
+                count++
+        }
+        return count
+    }
+
     acceptedButtons: Qt.LeftButton | Qt.RightButton
 
     onPressAndHold: {
@@ -619,16 +631,24 @@ MouseArea {
                 active: taskMouseArea.containsMouse
             }
 
-            // Active-window indicator dot
-            Rectangle {
+            // Window indicator dots (one per sibling window of the same app)
+            Row {
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottomMargin: Kirigami.Units.smallSpacing / 2
-                width: Kirigami.Units.smallSpacing * 2
-                height: width
-                radius: width / 2
-                color: Kirigami.Theme.highlightColor
-                visible: taskDelegate.model.IsActive === true
+                spacing: Kirigami.Units.smallSpacing / 2
+
+                Repeater {
+                    model: root.windowCountForTask(taskDelegate.index)
+
+                    Rectangle {
+                        width: Kirigami.Units.smallSpacing * 1.5
+                        height: width
+                        radius: width / 2
+                        color: Kirigami.Theme.highlightColor
+                        opacity: taskDelegate.model.IsActive === true ? 1.0 : 0.4
+                    }
+                }
             }
 
             // Click to activate, hover for thumbnail preview
