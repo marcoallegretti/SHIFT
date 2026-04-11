@@ -1,7 +1,6 @@
 # Shift
 
-Convergence mode for Plasma Mobile. One shell that works as a phone and
-adapts to a desktop when you connect a monitor, keyboard, or mouse.
+ SHIFT is an open source shell built on KDE Plasma Mobile, designed to adapt fluidly to your computing needs across devices
 
 Shift is a fork of [plasma-mobile](https://invent.kde.org/plasma/plasma-mobile).
 The upstream phone UI is untouched; convergence adds a layer on top.
@@ -37,6 +36,23 @@ cmake --build build
 cmake --install build
 ```
 
-### Upstream
+### Disclaimer
+
+SHIFT is an independent project based on KDE Plasma Mobile.
+
+It is **not affiliated with or endorsed by** KDE or the KDE community.
+
+Some visual elements (such as icons or graphical assets) may originate from KDE Plasma Mobile and are used in accordance with their respective licenses. These elements may be replaced in future versions as the project evolves.
+
+All trademarks, including KDE, belong to their respective owners.
+
+---
+
+### Upstream Relationship
+
+SHIFT is not intended as a direct contribution to KDE Plasma Mobile.
+
+However, if parts of this project are considered useful, contributions or ideas may be proposed upstream in a collaborative manner.
+
 
 See [pm_README.md](pm_README.md) for the original Plasma Mobile README.
