@@ -129,19 +129,7 @@ MouseArea {
         filterHidden: false
         virtualDesktop: virtualDesktopInfo.currentDesktop
         activity: activityInfo.currentActivity
-        groupMode: TaskManager.TasksModel.GroupDisabled
-    }
-
-    // Count how many windows share the same AppId as the task at the given index
-    function windowCountForTask(taskIndex) {
-        var appId = tasksModel.data(tasksModel.makeModelIndex(taskIndex), TaskManager.AbstractTasksModel.AppId)
-        if (!appId) return 1
-        var count = 0
-        for (var i = 0; i < tasksModel.rowCount(); i++) {
-            if (tasksModel.data(tasksModel.makeModelIndex(i), TaskManager.AbstractTasksModel.AppId) === appId)
-                count++
-        }
-        return count
+        groupMode: TaskManager.TasksModel.GroupApplications
     }
 
     acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -480,8 +468,9 @@ MouseArea {
         id: thumbnailPopup
 
         property var targetDelegate: null
-        property string windowTitle: ""
-        property string windowUuid: ""
+        property int taskIndex: -1
+        property var windowIds: []
+        property bool isGroup: false
         property bool popupHovered: false
 
         function open() { visible = true }
@@ -490,7 +479,15 @@ MouseArea {
 
         flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
         color: "transparent"
-        width: Kirigami.Units.gridUnit * 16
+
+        readonly property real thumbWidth: windowIds.length <= 1
+            ? Kirigami.Units.gridUnit * 16
+            : Kirigami.Units.gridUnit * 12
+
+        width: Math.max(Kirigami.Units.gridUnit * 8,
+            windowIds.length * thumbWidth
+            + Math.max(0, windowIds.length - 1) * Kirigami.Units.smallSpacing
+            + 2 * Kirigami.Units.smallSpacing)
         height: popupContent.implicitHeight + 2 * Kirigami.Units.smallSpacing
 
         // Position above the hovered dock icon, in global coordinates
@@ -507,8 +504,10 @@ MouseArea {
 
         onVisibleChanged: {
             if (!visible) {
-                windowUuid = ""
+                windowIds = []
                 targetDelegate = null
+                taskIndex = -1
+                isGroup = false
             }
         }
 
@@ -522,66 +521,99 @@ MouseArea {
             border.width: 1
             radius: Kirigami.Units.cornerRadius
 
-            MouseArea {
-                id: popupHoverArea
-                anchors.fill: parent
-                hoverEnabled: true
-
-                onContainsMouseChanged: {
-                    thumbnailPopup.popupHovered = containsMouse
-                    if (containsMouse) {
+            // HoverHandler for popup-level hover tracking (does not
+            // consume mouse events, so clicks still reach delegates).
+            HoverHandler {
+                id: popupHoverHandler
+                onHoveredChanged: {
+                    thumbnailPopup.popupHovered = hovered
+                    if (hovered) {
                         thumbnailHideTimer.stop()
                     } else if (root.hoveredTaskIndex < 0) {
                         thumbnailHideTimer.restart()
                     }
                 }
+            }
 
-                onClicked: {
-                    if (thumbnailPopup.targetDelegate) {
-                        tasksModel.requestActivate(
-                            tasksModel.makeModelIndex(thumbnailPopup.targetDelegate.index))
-                        thumbnailPopup.close()
-                    }
-                }
+            Row {
+                id: popupContent
+                anchors.fill: parent
+                anchors.margins: Kirigami.Units.smallSpacing
+                spacing: Kirigami.Units.smallSpacing
 
-                Column {
-                    id: popupContent
-                    anchors.fill: parent
-                    anchors.margins: Kirigami.Units.smallSpacing
-                    spacing: Kirigami.Units.smallSpacing
+                Repeater {
+                    model: thumbnailPopup.windowIds.length
 
-                    Item {
-                        width: parent.width
-                        height: width * 9 / 16
+                    delegate: MouseArea {
+                        id: thumbEntry
+                        width: thumbnailPopup.thumbWidth
+                        height: thumbColumn.implicitHeight
+                        hoverEnabled: true
 
-                        Loader {
-                            id: pipeWireLoader
-                            active: thumbnailPopup.visible
-                                && thumbnailPopup.windowUuid !== ""
+                        readonly property string childUuid: thumbnailPopup.windowIds[index] || ""
+                        readonly property string childTitle: {
+                            if (!thumbnailPopup.isGroup)
+                                return tasksModel.data(tasksModel.makeModelIndex(thumbnailPopup.taskIndex), 0) || ""
+                            return tasksModel.data(tasksModel.makeModelIndex(thumbnailPopup.taskIndex, index), 0) || ""
+                        }
+
+                        onClicked: {
+                            var idx = thumbnailPopup.isGroup
+                                ? tasksModel.makeModelIndex(thumbnailPopup.taskIndex, index)
+                                : tasksModel.makeModelIndex(thumbnailPopup.taskIndex)
+                            tasksModel.requestActivate(idx)
+                            thumbnailPopup.close()
+                        }
+
+                        Rectangle {
                             anchors.fill: parent
-                            sourceComponent: PipeWireThumbnail {
-                                windowUuid: thumbnailPopup.windowUuid
+                            radius: Kirigami.Units.cornerRadius
+                            color: thumbEntry.containsMouse
+                                ? Qt.rgba(Kirigami.Theme.highlightColor.r,
+                                          Kirigami.Theme.highlightColor.g,
+                                          Kirigami.Theme.highlightColor.b, 0.15)
+                                : "transparent"
+                        }
+
+                        Column {
+                            id: thumbColumn
+                            width: parent.width
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Item {
+                                width: parent.width
+                                height: width * 9 / 16
+
+                                Loader {
+                                    id: thumbPipeWireLoader
+                                    active: thumbnailPopup.visible
+                                        && thumbEntry.childUuid !== ""
+                                    anchors.fill: parent
+                                    sourceComponent: PipeWireThumbnail {
+                                        windowUuid: thumbEntry.childUuid
+                                    }
+                                }
+
+                                Kirigami.Icon {
+                                    anchors.centerIn: parent
+                                    width: Kirigami.Units.iconSizes.huge
+                                    height: width
+                                    source: thumbnailPopup.targetDelegate
+                                        ? thumbnailPopup.targetDelegate.model.decoration
+                                        : ""
+                                    visible: !thumbPipeWireLoader.item
+                                        || !thumbPipeWireLoader.item.hasThumbnail
+                                }
+                            }
+
+                            PC3.Label {
+                                width: parent.width
+                                text: thumbEntry.childTitle
+                                elide: Text.ElideRight
+                                horizontalAlignment: Text.AlignHCenter
+                                maximumLineCount: 1
                             }
                         }
-
-                        Kirigami.Icon {
-                            anchors.centerIn: parent
-                            width: Kirigami.Units.iconSizes.huge
-                            height: width
-                            source: thumbnailPopup.targetDelegate
-                                ? thumbnailPopup.targetDelegate.model.decoration
-                                : ""
-                            visible: !pipeWireLoader.item
-                                || !pipeWireLoader.item.hasThumbnail
-                        }
-                    }
-
-                    PC3.Label {
-                        width: parent.width
-                        text: thumbnailPopup.windowTitle
-                        elide: Text.ElideRight
-                        horizontalAlignment: Text.AlignHCenter
-                        maximumLineCount: 1
                     }
                 }
             }
@@ -642,7 +674,10 @@ MouseArea {
                 spacing: Kirigami.Units.smallSpacing / 2
 
                 Repeater {
-                    model: root.windowCountForTask(taskDelegate.index)
+                    model: {
+                        var ids = taskDelegate.model.WinIdList
+                        return ids ? ids.length : 1
+                    }
 
                     Rectangle {
                         width: Kirigami.Units.smallSpacing * 1.5
@@ -666,17 +701,32 @@ MouseArea {
                         thumbnailShowTimer.stop()
                         taskContextMenu.open();
                     } else {
-                        thumbnailPopup.close()
-                        tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
+                        var winIds = taskDelegate.model.WinIdList
+                        if (winIds && winIds.length > 1) {
+                            // Multiple windows: toggle thumbnail popup
+                            if (thumbnailPopup.opened && thumbnailPopup.taskIndex === taskDelegate.index) {
+                                thumbnailPopup.close()
+                            } else {
+                                thumbnailPopup.targetDelegate = taskDelegate
+                                thumbnailPopup.taskIndex = taskDelegate.index
+                                thumbnailPopup.windowIds = winIds
+                                thumbnailPopup.isGroup = taskDelegate.model.IsGroupParent === true
+                                thumbnailPopup.open()
+                            }
+                        } else {
+                            thumbnailPopup.close()
+                            tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
+                        }
                     }
                 }
                 onContainsMouseChanged: {
                     if (containsMouse) {
                         thumbnailHideTimer.stop()
                         thumbnailPopup.targetDelegate = taskDelegate
-                        thumbnailPopup.windowTitle = taskDelegate.model.display || ""
+                        thumbnailPopup.taskIndex = taskDelegate.index
                         var winIds = taskDelegate.model.WinIdList
-                        thumbnailPopup.windowUuid = (winIds && winIds.length > 0) ? winIds[0] : ""
+                        thumbnailPopup.windowIds = winIds ? winIds : []
+                        thumbnailPopup.isGroup = taskDelegate.model.IsGroupParent === true
                         root.hoveredTaskIndex = taskDelegate.index
                         if (!thumbnailPopup.opened) {
                             thumbnailShowTimer.restart()
@@ -717,11 +767,15 @@ MouseArea {
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
                     text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
+                    visible: taskDelegate.model.IsGroupParent !== true
                     onClicked: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: "window-close"
-                    text: i18n("Close")
+                    text: {
+                        var ids = taskDelegate.model.WinIdList
+                        return (ids && ids.length > 1) ? i18n("Close All") : i18n("Close")
+                    }
                     onClicked: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
                 }
             }
