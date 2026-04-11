@@ -39,6 +39,11 @@ ContainmentItem {
 
     // Whether the currently showing app is in "fullscreen"
     readonly property bool fullscreen: {
+        // In convergence mode the status bar is always visible, like a desktop panel.
+        if (ShellSettings.Settings.convergenceModeEnabled) {
+            return false;
+        }
+
         if (windowMaximizedTracker.isCurrentWindowFullscreen) {
             return true;
         }
@@ -76,7 +81,7 @@ ContainmentItem {
             root.panel.thickness = root.panelHeight;
             root.panel.thickness = root.panelHeight;
 
-            root.panel.visibilityMode = ShellSettings.Settings.autoHidePanelsEnabled ? 3 : 0;
+            root.panel.visibilityMode = (ShellSettings.Settings.autoHidePanelsEnabled || ShellSettings.Settings.convergenceModeEnabled) ? 3 : 0;
             MobileShell.ShellUtil.setWindowLayer(root.panel, LayerShell.Window.LayerOverlay)
             root.updateTouchArea();
         }
@@ -114,10 +119,34 @@ ContainmentItem {
         function onAutoHidePanelsEnabledChanged() {
             root.setWindowProperties();
         }
+
+        function onConvergenceModeEnabledChanged() {
+            root.setWindowProperties();
+        }
     }
 
     Component.onCompleted: {
         root.setWindowProperties();
+    }
+
+    // Invisible layer-shell surface that reserves screen space for the
+    // status bar in convergence mode.  The panel itself uses WindowsGoBelow
+    // (exclusiveZone -1) so it stays above windows; this separate surface
+    // at LayerBottom provides the actual exclusive zone so KWin shrinks
+    // MaximizeArea by the panel height.
+    Window {
+        id: topBarSpaceReserver
+        visible: ShellSettings.Settings.convergenceModeEnabled
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
+        height: root.panelHeight
+        width: 1
+
+        LayerShell.Window.scope: "topbar-space"
+        LayerShell.Window.layer: LayerShell.Window.LayerBottom
+        LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
+        LayerShell.Window.exclusionZone: root.panelHeight
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 
     // Visual panel component
