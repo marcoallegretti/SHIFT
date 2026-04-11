@@ -32,10 +32,6 @@ Key changes so far:
 - **Thumbnail previews** on dock icon hover via PipeWire screencasting.
 - **Pin to dock** — right-click a running app to pin it to favourites;
   pinned apps get a "Remove from Dock" action.
-- **Bug fixes** — minimized windows stay in dock instead of vanishing,
-  app drawer dismiss overlay no longer covers dock icons, launching an
-  app in convergence mode always starts a new process instead of
-  re-activating an existing window.
 
 ## Upstream base
 
