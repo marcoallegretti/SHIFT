@@ -13,6 +13,7 @@ import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.kirigami as Kirigami
 import QtQuick.Controls as Controls
+import QtQuick.Templates as T
 
 import "./private"
 import "./delegate"
@@ -345,6 +346,7 @@ MouseArea {
 
                     ContextMenuLoader {
                         id: contextMenu
+                        menuPopupType: root.convergenceMode ? T.Popup.Window : T.Popup.Item
 
                         // close menu when drag starts
                         Connections {
@@ -425,6 +427,7 @@ MouseArea {
 
                     ContextMenuLoader {
                         id: contextMenu
+                        menuPopupType: root.convergenceMode ? T.Popup.Window : T.Popup.Item
 
                         // close menu when drag starts
                         Connections {
@@ -661,7 +664,7 @@ MouseArea {
                     if (mouse.button === Qt.RightButton) {
                         thumbnailPopup.close()
                         thumbnailShowTimer.stop()
-                        taskContextMenu.popup();
+                        taskContextMenu.open();
                     } else {
                         thumbnailPopup.close()
                         tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
@@ -688,23 +691,38 @@ MouseArea {
                 }
             }
 
-            Controls.Menu {
+            PC3.Menu {
                 id: taskContextMenu
-                Controls.MenuItem {
-                    text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                popupType: T.Popup.Window
+
+                property string taskStorageId: {
+                    var id = taskDelegate.model.AppId || ""
+                    if (id && !id.endsWith(".desktop"))
+                        id += ".desktop"
+                    return id
+                }
+
+                PC3.MenuItem {
+                    icon.name: "window-pin"
+                    text: i18n("Pin to Dock")
+                    visible: taskContextMenu.taskStorageId !== "" && !folio.FavouritesModel.containsApplication(taskContextMenu.taskStorageId)
+                    enabled: !folio.FolioSettings.lockLayout
+                    onClicked: folio.FavouritesModel.addApplication(taskContextMenu.taskStorageId)
+                }
+                PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
-                    onTriggered: tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(taskDelegate.index))
+                    text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                    onClicked: tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(taskDelegate.index))
                 }
-                Controls.MenuItem {
-                    text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
+                PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
-                    onTriggered: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
+                    text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
+                    onClicked: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
                 }
-                Controls.MenuSeparator {}
-                Controls.MenuItem {
-                    text: i18n("Close")
+                PC3.MenuItem {
                     icon.name: "window-close"
-                    onTriggered: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
+                    text: i18n("Close")
+                    onClicked: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
                 }
             }
         }

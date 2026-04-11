@@ -4,6 +4,7 @@
 #include "favouritesmodel.h"
 #include "homescreenstate.h"
 
+#include <KService>
 #include <QByteArray>
 #include <QDebug>
 #include <QJsonArray>
@@ -74,6 +75,35 @@ void FavouritesModel::removeEntry(int row)
     endRemoveRows();
 
     save();
+}
+
+bool FavouritesModel::addApplication(const QString &storageId)
+{
+    if (containsApplication(storageId)) {
+        return false;
+    }
+
+    KService::Ptr service = KService::serviceByStorageId(storageId);
+    if (!service) {
+        return false;
+    }
+
+    auto app = std::make_shared<FolioApplication>(service);
+    auto delegate = std::make_shared<FolioDelegate>(app);
+    return addEntry(m_delegates.size(), delegate);
+}
+
+bool FavouritesModel::containsApplication(const QString &storageId) const
+{
+    for (const auto &entry : m_delegates) {
+        if (entry.delegate && entry.delegate->type() == FolioDelegate::Application) {
+            auto app = entry.delegate->application();
+            if (app && app->storageId() == storageId) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void FavouritesModel::moveEntry(int fromRow, int toRow)

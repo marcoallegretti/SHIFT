@@ -348,7 +348,8 @@ Item {
 
                     // don't show in settings mode
                     opacity: 1 - folio.HomeScreenState.settingsOpenProgress
-                    visible: opacity > 0
+                    // Hidden in convergence mode — the dock overlay window renders it instead
+                    visible: opacity > 0 && !ShellSettings.Settings.convergenceModeEnabled
 
                     // one is ignored as anchors are set
                     height: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6

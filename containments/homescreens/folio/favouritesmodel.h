@@ -42,6 +42,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void removeEntry(int row);
+    Q_INVOKABLE bool addApplication(const QString &storageId);
+    Q_INVOKABLE bool containsApplication(const QString &storageId) const;
     void moveEntry(int fromRow, int toRow);
     bool canAddEntry(int row, std::shared_ptr<FolioDelegate> delegate);
     bool addEntry(int row, std::shared_ptr<FolioDelegate> delegate);

@@ -4,6 +4,7 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Layouts
+import QtQuick.Templates as T
 
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.kirigami as Kirigami
@@ -13,6 +14,7 @@ Loader {
     active: false
 
     property list<Kirigami.Action> actions
+    property int menuPopupType: T.Popup.Item
 
     function open() {
         root.active = true;
@@ -28,7 +30,10 @@ Loader {
     sourceComponent: PC3.Menu {
         id: menu
         title: "Context Menu"
-        closePolicy: PC3.Menu.CloseOnReleaseOutside | PC3.Menu.CloseOnEscape
+        popupType: root.menuPopupType
+        closePolicy: root.menuPopupType === T.Popup.Window
+            ? (PC3.Menu.CloseOnPressOutside | PC3.Menu.CloseOnEscape)
+            : (PC3.Menu.CloseOnReleaseOutside | PC3.Menu.CloseOnEscape)
 
         Repeater {
             model: root.actions

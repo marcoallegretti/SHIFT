@@ -17,6 +17,8 @@ import org.kde.plasma.private.mobileshell.state as MobileShellState
 import org.kde.plasma.private.mobileshell.windowplugin as WindowPlugin
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
+import org.kde.layershell 1.0 as LayerShell
+
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
 import "./private"
@@ -154,6 +156,33 @@ ContainmentItem {
         color: Qt.rgba(0, 0, 0, 0.3)
 
         opacity: folio.HomeScreenState.settingsOpenProgress
+    }
+
+    // Dock overlay window — renders the favourites bar above application
+    // windows in convergence mode.  LayerTop sits above normal windows but
+    // below LayerOverlay (notifications, volume OSD).  The exclusive zone
+    // that reserves screen space is handled by the dockSpaceReserver in the
+    // task panel containment; this window only provides the visible dock.
+    Window {
+        id: dockOverlay
+        visible: ShellSettings.Settings.convergenceModeEnabled
+        color: "transparent"
+        width: Screen.width
+        height: Kirigami.Units.gridUnit * 3
+
+        LayerShell.Window.scope: "dock-overlay"
+        LayerShell.Window.layer: LayerShell.Window.LayerTop
+        LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
+        LayerShell.Window.exclusionZone: -1
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
+
+        FavouritesBar {
+            id: dockOverlayBar
+            anchors.fill: parent
+            folio: root.folio
+            maskManager: root.maskManager
+            homeScreen: folioHomeScreen
+        }
     }
 
     MobileShell.HomeScreen {
