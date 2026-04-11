@@ -176,6 +176,13 @@ ContainmentItem {
         LayerShell.Window.exclusionZone: -1
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
+        Rectangle {
+            anchors.fill: parent
+            Kirigami.Theme.inherit: false
+            Kirigami.Theme.colorSet: Kirigami.Theme.Window
+            color: Kirigami.Theme.backgroundColor
+        }
+
         FavouritesBar {
             id: dockOverlayBar
             anchors.fill: parent
