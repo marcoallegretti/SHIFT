@@ -176,11 +176,38 @@ ContainmentItem {
         LayerShell.Window.exclusionZone: -1
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
+        // Auto-hide: slide dock content off-screen when a window is
+        // maximized.  A HoverHandler brings it back on mouse proximity.
+        property real dockOffset: 0
+        readonly property real dockHeight: Kirigami.Units.gridUnit * 3
+        readonly property bool dockHovered: dockHoverHandler.hovered
+        readonly property bool shouldHide: windowMaximizedTracker.showingWindow && !dockHovered
+
+        onShouldHideChanged: {
+            if (shouldHide) {
+                dockOffset = dockHeight
+            } else {
+                dockOffset = 0
+            }
+        }
+
+        HoverHandler {
+            id: dockHoverHandler
+        }
+
+        Behavior on dockOffset {
+            NumberAnimation {
+                easing.type: dockOverlay.shouldHide ? Easing.InExpo : Easing.OutExpo
+                duration: Kirigami.Units.longDuration
+            }
+        }
+
         Rectangle {
             anchors.fill: parent
             Kirigami.Theme.inherit: false
             Kirigami.Theme.colorSet: Kirigami.Theme.Window
             color: Kirigami.Theme.backgroundColor
+            transform: Translate { y: dockOverlay.dockOffset }
         }
 
         FavouritesBar {
@@ -189,6 +216,7 @@ ContainmentItem {
             folio: root.folio
             maskManager: root.maskManager
             homeScreen: folioHomeScreen
+            transform: Translate { y: dockOverlay.dockOffset }
         }
     }
 

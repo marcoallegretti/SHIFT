@@ -145,6 +145,8 @@ ContainmentItem {
     // desktop) with an exclusive zone equal to the dock height so that KWin
     // shrinks MaximizeArea accordingly.  Input-transparent so clicks fall
     // through to the homescreen dock underneath.
+    // When a window is maximized the exclusive zone drops to 0 so the
+    // window reclaims the full screen while the dock auto-hides.
     Window {
         id: dockSpaceReserver
         visible: ShellSettings.Settings.convergenceModeEnabled
@@ -157,7 +159,7 @@ ContainmentItem {
         LayerShell.Window.scope: "dock-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
+        LayerShell.Window.exclusionZone: windowMaximizedTracker.showingWindow ? 0 : Kirigami.Units.gridUnit * 3
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 
