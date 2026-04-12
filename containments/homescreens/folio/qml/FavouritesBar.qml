@@ -46,6 +46,15 @@ MouseArea {
     // Thumbnail popup hover tracking
     property int hoveredTaskIndex: -1
 
+    // Drag-reorder state (convergence mode only)
+    property int dragReorderIndex: -1
+    property real dragReorderOffset: 0
+    readonly property int dragTargetIndex: {
+        if (dragReorderIndex === -1) return -1
+        let shift = Math.round(dragReorderOffset / dockCellWidth)
+        return Math.max(0, Math.min(repeater.count - 1, dragReorderIndex + shift))
+    }
+
     // Home button (convergence mode, left end)
     Rectangle {
         id: homeButton
@@ -192,7 +201,25 @@ MouseArea {
             // multiply the 'fromCenterValue' by the cell size to get the actual position
             readonly property int centerPosition: (isLocationBottom ? root.dockCellWidth : root.dockCellHeight) * fromCenterValue
 
-            x: isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2
+            // Visual shift during drag-reorder: dragged item follows cursor,
+            // displaced items slide to make room.
+            property real dragVisualShift: {
+                if (root.dragReorderIndex === -1) return 0
+                if (delegate.index === root.dragReorderIndex) return root.dragReorderOffset
+                let targetIdx = root.dragTargetIndex
+                let myIdx = delegate.index
+                let dragIdx = root.dragReorderIndex
+                let cellW = root.dockCellWidth
+                if (targetIdx > dragIdx && myIdx > dragIdx && myIdx <= targetIdx) return -cellW
+                if (targetIdx < dragIdx && myIdx >= targetIdx && myIdx < dragIdx) return cellW
+                return 0
+            }
+            Behavior on dragVisualShift {
+                enabled: root.dragReorderIndex !== -1 && delegate.index !== root.dragReorderIndex
+                NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
+            }
+
+            x: (isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2) + dragVisualShift
             y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
 
             implicitWidth: root.dockCellWidth
@@ -296,18 +323,47 @@ MouseArea {
                     // don't show label in drag and drop mode
                     labelOpacity: delegate.opacity
 
+                    // Convergence drag-reorder: click-and-drag to reorder
+                    onDraggingChanged: {
+                        if (root.convergenceMode && !folio.FolioSettings.lockLayout) {
+                            if (appDelegate.dragging) {
+                                contextMenu.close()
+                                root.dragReorderIndex = delegate.index
+                                root.dragReorderOffset = 0
+                            } else {
+                                let from = root.dragReorderIndex
+                                let to = root.dragTargetIndex
+                                root.dragReorderIndex = -1
+                                root.dragReorderOffset = 0
+                                if (from !== -1 && to !== -1 && from !== to) {
+                                    folio.FavouritesModel.moveEntry(from, to)
+                                }
+                            }
+                        }
+                    }
+
+                    onDragMoved: (deltaX) => {
+                        if (root.convergenceMode && !folio.FolioSettings.lockLayout) {
+                            root.dragReorderOffset = deltaX
+                        }
+                    }
+
                     onPressAndHold: {
                         // prevent editing if lock layout is enabled
                         if (folio.FolioSettings.lockLayout) return;
 
-                        let mappedCoords = root.homeScreen.prepareStartDelegateDrag(delegate.delegateModel, appDelegate.delegateItem);
-                        folio.HomeScreenState.startDelegateFavouritesDrag(
-                            mappedCoords.x,
-                            mappedCoords.y,
-                            appDelegate.pressPosition.x,
-                            appDelegate.pressPosition.y,
-                            delegate.index
-                        );
+                        // In convergence mode, drag-reorder is handled by DragHandler;
+                        // only open the context menu on press-and-hold.
+                        if (!root.convergenceMode) {
+                            let mappedCoords = root.homeScreen.prepareStartDelegateDrag(delegate.delegateModel, appDelegate.delegateItem);
+                            folio.HomeScreenState.startDelegateFavouritesDrag(
+                                mappedCoords.x,
+                                mappedCoords.y,
+                                appDelegate.pressPosition.x,
+                                appDelegate.pressPosition.y,
+                                delegate.index
+                            );
+                        }
 
                         contextMenu.open();
                         haptics.buttonVibrate();
@@ -315,7 +371,7 @@ MouseArea {
 
                     onPressAndHoldReleased: {
                         // cancel the event if the delegate is not dragged
-                        if (folio.HomeScreenState.swipeState === Folio.HomeScreenState.AwaitingDraggingDelegate) {
+                        if (!root.convergenceMode && folio.HomeScreenState.swipeState === Folio.HomeScreenState.AwaitingDraggingDelegate) {
                             homeScreen.cancelDelegateDrag();
                         }
                     }
@@ -380,15 +436,45 @@ MouseArea {
                         folio.HomeScreenState.openFolder(pos.x, pos.y, delegate.delegateModel.folder);
                     }
 
+                    // Convergence drag-reorder: click-and-drag to reorder
+                    onDraggingChanged: {
+                        if (root.convergenceMode && !folio.FolioSettings.lockLayout) {
+                            if (appFolderDelegate.dragging) {
+                                contextMenu.close()
+                                root.dragReorderIndex = delegate.index
+                                root.dragReorderOffset = 0
+                            } else {
+                                let from = root.dragReorderIndex
+                                let to = root.dragTargetIndex
+                                root.dragReorderIndex = -1
+                                root.dragReorderOffset = 0
+                                if (from !== -1 && to !== -1 && from !== to) {
+                                    folio.FavouritesModel.moveEntry(from, to)
+                                }
+                            }
+                        }
+                    }
+
+                    onDragMoved: (deltaX) => {
+                        if (root.convergenceMode && !folio.FolioSettings.lockLayout) {
+                            root.dragReorderOffset = deltaX
+                        }
+                    }
+
                     onPressAndHold: {
-                        let mappedCoords = root.homeScreen.prepareStartDelegateDrag(delegate.delegateModel, appFolderDelegate.delegateItem);
-                        folio.HomeScreenState.startDelegateFavouritesDrag(
-                            mappedCoords.x,
-                            mappedCoords.y,
-                            appFolderDelegate.pressPosition.x,
-                            appFolderDelegate.pressPosition.y,
-                            delegate.index
-                        );
+                        // prevent editing if lock layout is enabled
+                        if (folio.FolioSettings.lockLayout) return;
+
+                        if (!root.convergenceMode) {
+                            let mappedCoords = root.homeScreen.prepareStartDelegateDrag(delegate.delegateModel, appFolderDelegate.delegateItem);
+                            folio.HomeScreenState.startDelegateFavouritesDrag(
+                                mappedCoords.x,
+                                mappedCoords.y,
+                                appFolderDelegate.pressPosition.x,
+                                appFolderDelegate.pressPosition.y,
+                                delegate.index
+                            );
+                        }
 
                         contextMenu.open();
                         haptics.buttonVibrate();
@@ -396,7 +482,7 @@ MouseArea {
 
                     onPressAndHoldReleased: {
                         // cancel the event if the delegate is not dragged
-                        if (folio.HomeScreenState.swipeState === Folio.HomeScreenState.AwaitingDraggingDelegate) {
+                        if (!root.convergenceMode && folio.HomeScreenState.swipeState === Folio.HomeScreenState.AwaitingDraggingDelegate) {
                             root.homeScreen.cancelDelegateDrag();
                         }
                     }

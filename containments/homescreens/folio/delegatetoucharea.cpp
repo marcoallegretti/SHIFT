@@ -55,6 +55,19 @@ void DelegateTouchArea::setHovered(bool hovered)
     }
 }
 
+bool DelegateTouchArea::dragging()
+{
+    return m_dragging;
+}
+
+void DelegateTouchArea::setDragging(bool dragging)
+{
+    if (dragging != m_dragging) {
+        m_dragging = dragging;
+        Q_EMIT draggingChanged();
+    }
+}
+
 Qt::CursorShape DelegateTouchArea::cursorShape()
 {
     return cursor().shape();
@@ -112,6 +125,8 @@ void DelegateTouchArea::mouseUngrabEvent()
 {
     if (m_pressed) {
         handleReleaseEvent(nullptr, false);
+    } else {
+        setDragging(false);
     }
     QQuickItem::mouseUngrabEvent();
 }
@@ -151,6 +166,8 @@ void DelegateTouchArea::touchUngrabEvent()
 {
     if (m_pressed) {
         handleReleaseEvent(nullptr, false);
+    } else {
+        setDragging(false);
     }
     QQuickItem::touchUngrabEvent();
 }
@@ -194,6 +211,7 @@ void DelegateTouchArea::handleReleaseEvent(QPointerEvent *event, bool click)
     Q_UNUSED(event)
     bool wasPressed = m_pressed;
     setPressed(false);
+    setDragging(false);
 
     if (!m_pressAndHeld && click && wasPressed) {
         Q_EMIT clicked();
@@ -213,6 +231,11 @@ void DelegateTouchArea::handleMoveEvent(QPointerEvent *event, QPointF point)
     if (QPointF(point - m_mouseDownPosition).manhattanLength() >= QGuiApplication::styleHints()->startDragDistance()) {
         m_pressAndHoldTimer->stop();
         setPressed(false);
+
+        if (!m_pressAndHeld) {
+            setDragging(true);
+            Q_EMIT dragMoved(point.x() - m_mouseDownPosition.x());
+        }
     }
 }
 
