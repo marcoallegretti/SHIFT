@@ -73,10 +73,6 @@ MouseArea {
             hoverEnabled: true
             onClicked: MobileShellState.ShellDBusClient.openHomeScreen()
         }
-
-        Controls.ToolTip.text: i18n("Home")
-        Controls.ToolTip.visible: homeMouseArea.containsMouse
-        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
     }
 
     // Overview button (convergence mode, right end)
@@ -106,10 +102,6 @@ MouseArea {
             hoverEnabled: true
             onClicked: root.folio.triggerOverview()
         }
-
-        Controls.ToolTip.text: i18n("Overview")
-        Controls.ToolTip.visible: overviewMouseArea.containsMouse
-        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
     }
 
     TaskManager.VirtualDesktopInfo {
