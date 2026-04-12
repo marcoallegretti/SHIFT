@@ -2,6 +2,9 @@
 
  SHIFT is an open source shell built on KDE Plasma Mobile, designed to adapt fluidly to your computing needs across devices
 
+![App Drawer](screenshots/SHIFT-app_drawer.png)
+![Dock Pin to Dock](screenshots/SHIFT-dock-pin.png)
+
 Shift is a fork of [plasma-mobile](https://invent.kde.org/plasma/plasma-mobile).
 The upstream phone UI is untouched; convergence adds a layer on top.
 
@@ -10,6 +13,7 @@ The upstream phone UI is untouched; convergence adds a layer on top.
 * Navigation panel replaced by a dock with running-app indicators,
   favourites, context menus, and hover tooltips
 * App drawer opens as a floating popup above the dock
+
 * Window management: edge tiling, edge maximize, close buttons, task
   context menus, Overview integration
 * Status bar gains a system tray, date display, and hover highlights
