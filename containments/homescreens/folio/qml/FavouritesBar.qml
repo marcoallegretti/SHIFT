@@ -747,7 +747,8 @@ MouseArea {
                 PC3.MenuItem {
                     icon.name: "window-pin"
                     text: i18n("Pin to Dock")
-                    visible: taskContextMenu.taskStorageId !== "" && !folio.FavouritesModel.containsApplication(taskContextMenu.taskStorageId)
+                    // repeater.count dependency forces re-evaluation when favourites change
+                    visible: taskContextMenu.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskContextMenu.taskStorageId)
                     enabled: !folio.FolioSettings.lockLayout
                     onClicked: folio.FavouritesModel.addApplication(taskContextMenu.taskStorageId)
                 }
