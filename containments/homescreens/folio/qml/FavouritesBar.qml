@@ -596,6 +596,32 @@ MouseArea {
                                     visible: !thumbPipeWireLoader.item
                                         || !thumbPipeWireLoader.item.hasThumbnail
                                 }
+
+                                MouseArea {
+                                    id: closeButton
+                                    width: Kirigami.Units.iconSizes.small
+                                    height: width
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.margins: Kirigami.Units.smallSpacing
+                                    z: 1
+                                    visible: thumbEntry.containsMouse
+
+                                    onClicked: {
+                                        var idx = thumbnailPopup.isGroup
+                                            ? tasksModel.makeModelIndex(thumbnailPopup.taskIndex, index)
+                                            : tasksModel.makeModelIndex(thumbnailPopup.taskIndex)
+                                        tasksModel.requestClose(idx)
+                                        if (thumbnailPopup.windowIds.length <= 1) {
+                                            thumbnailPopup.close()
+                                        }
+                                    }
+
+                                    Kirigami.Icon {
+                                        anchors.fill: parent
+                                        source: "window-close"
+                                    }
+                                }
                             }
 
                             PC3.Label {
