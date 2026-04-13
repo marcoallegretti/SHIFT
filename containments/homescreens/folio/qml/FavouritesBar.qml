@@ -146,6 +146,7 @@ MouseArea {
             id: homeMouseArea
             anchors.fill: parent
             hoverEnabled: true
+            cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: MobileShellState.ShellDBusClient.openHomeScreen()
         }
     }
@@ -175,6 +176,7 @@ MouseArea {
             id: overviewMouseArea
             anchors.fill: parent
             hoverEnabled: true
+            cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: root.folio.triggerOverview()
         }
     }
@@ -695,6 +697,7 @@ MouseArea {
                         width: thumbnailPopup.thumbWidth
                         height: thumbColumn.implicitHeight
                         hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
 
                         readonly property string childUuid: thumbnailPopup.windowIds[index] || ""
                         readonly property string childTitle: {
@@ -760,6 +763,7 @@ MouseArea {
                                     anchors.margins: Kirigami.Units.smallSpacing
                                     z: 1
                                     visible: thumbEntry.containsMouse
+                                    cursorShape: Qt.PointingHandCursor
 
                                     onClicked: {
                                         var idx = thumbnailPopup.isGroup
@@ -930,6 +934,7 @@ MouseArea {
                 id: taskMouseArea
                 anchors.fill: parent
                 hoverEnabled: true
+                cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.MiddleButton) {
