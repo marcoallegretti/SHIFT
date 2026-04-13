@@ -169,8 +169,15 @@ Item {
         root.state = "";
     }
 
+    Keys.onEscapePressed: {
+        if (intendedToBeVisible) {
+            close();
+        }
+    }
+
     function open() {
         cancelAnimations();
+        forceActiveFocus();
         if (openToPinnedMode) {
             root.state = "open"; // go to pinned height
         } else {

@@ -27,7 +27,7 @@ Window {
     LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight | LayerShell.Window.AnchorBottom
     LayerShell.Window.layer: LayerShell.Window.LayerOverlay
     LayerShell.Window.exclusionZone: -1
-    LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+    LayerShell.Window.keyboardInteractivity: drawer.intendedToBeVisible ? LayerShell.Window.KeyboardInteractivityExclusive : LayerShell.Window.KeyboardInteractivityNone
 
     /**
      * The ActionDrawer component.
