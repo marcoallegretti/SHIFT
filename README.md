@@ -4,6 +4,7 @@
 
 ![App Drawer](screenshots/SHIFT-app_drawer.png)
 ![Dock Pin to Dock](screenshots/SHIFT-dock-pin.png)
+![Touch Mode](screenshots/SHIFT-touch.png)
 
 Shift is a fork of [plasma-mobile](https://invent.kde.org/plasma/plasma-mobile).
 The upstream phone UI is untouched; convergence adds a layer on top.
@@ -60,3 +61,12 @@ However, if parts of this project are considered useful, contributions or ideas 
 
 
 See [pm_README.md](pm_README.md) for the original Plasma Mobile README.
+
+---
+
+### License
+
+SHIFT-specific code is licensed under the [European Union Public Licence 1.2](LICENSES/EUPL-1.2.txt).
+
+Upstream files retain their original licenses (GPL-2.0-or-later, LGPL-2.1-or-later, etc.).
+See individual file headers and the [.reuse/dep5](.reuse/dep5) manifest for details.
