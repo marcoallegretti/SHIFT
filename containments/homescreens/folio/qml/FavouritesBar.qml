@@ -812,13 +812,18 @@ MouseArea {
                 }
             }
 
-            // Click to activate, hover for thumbnail preview
+            // Click to activate, middle-click to close, hover for thumbnail preview
             MouseArea {
                 id: taskMouseArea
                 anchors.fill: parent
                 hoverEnabled: true
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                 onClicked: (mouse) => {
+                    if (mouse.button === Qt.MiddleButton) {
+                        thumbnailPopup.close()
+                        tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index));
+                        return
+                    }
                     if (mouse.button === Qt.RightButton) {
                         thumbnailPopup.close()
                         thumbnailShowTimer.stop()
