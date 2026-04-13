@@ -43,6 +43,13 @@ MouseArea {
         ? navButtonWidth + (root.width - 2 * navButtonWidth) / 2
         : root.width / 2
 
+    // Visible spacer between pinned favourites and running tasks
+    readonly property bool showSpacer: convergenceMode && repeater.count > 0 && taskRepeater.count > 0
+    property real spacerWidth: showSpacer ? Kirigami.Units.largeSpacing * 2 : 0
+    Behavior on spacerWidth {
+        NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
+    }
+
     // Thumbnail popup hover tracking
     property int hoveredTaskIndex: -1
 
@@ -219,7 +226,7 @@ MouseArea {
                 NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
             }
 
-            x: (isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2) + dragVisualShift
+            x: (isLocationBottom ? centerPosition + root.dockCenterX - root.spacerWidth / 2 : (parent.width - width) / 2) + dragVisualShift
             y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
 
             implicitWidth: root.dockCellWidth
@@ -724,6 +731,18 @@ MouseArea {
         }
     }
 
+    // Separator between pinned favourites and running tasks
+    Rectangle {
+        id: dockSpacer
+        visible: root.showSpacer
+        x: (repeater.count - root.totalItemCount / 2) * root.dockCellWidth + root.dockCenterX - width / 2
+        y: parent.height * 0.2
+        width: Math.round(Kirigami.Units.devicePixelRatio)
+        height: parent.height * 0.6
+        color: Kirigami.Theme.textColor
+        opacity: 0.4
+    }
+
     Repeater {
         id: taskRepeater
         model: root.convergenceMode ? tasksModel : null
@@ -744,7 +763,7 @@ MouseArea {
 
             readonly property int centerPosition: (isLocationBottom ? root.dockCellWidth : root.dockCellHeight) * fromCenterValue
 
-            x: isLocationBottom ? centerPosition + root.dockCenterX : (parent.width - width) / 2
+            x: isLocationBottom ? centerPosition + root.dockCenterX + root.spacerWidth / 2 : (parent.width - width) / 2
             y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
 
             implicitWidth: root.dockCellWidth
