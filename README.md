@@ -36,7 +36,7 @@ The upstream phone UI is untouched; convergence adds a layer on top.
 ### Building
 
 ```
-cmake -B build
+cmake -B build -DPLASMA_MOBILE_LOCAL_KAUTH_INSTALL=ON
 cmake --build build
 cmake --install build
 ```

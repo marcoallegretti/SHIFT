@@ -115,12 +115,16 @@ distrobox enter shift-tw -- bash -c '
     cd ~/Projects/Shift
     cmake -S . -B build-clean -G Ninja \
         -DCMAKE_INSTALL_PREFIX=$PWD/.prefix \
-        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DPLASMA_MOBILE_LOCAL_KAUTH_INSTALL=ON
 '
 ```
 
 `-DCMAKE_INSTALL_PREFIX=$PWD/.prefix` tells cmake to install into a
-local directory instead of `/usr`.  During configure, ECM auto-generates
+local directory instead of `/usr`.
+`-DPLASMA_MOBILE_LOCAL_KAUTH_INSTALL=ON` redirects KAuth helper
+executables and polkit policy files into the local prefix so that
+`cmake --install` works without root.  During configure, ECM auto-generates
 `build-clean/prefix.sh` — a shell snippet that prepends `.prefix` paths
 to `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH`, `XDG_DATA_DIRS`, etc.  The
 preview script sources this file so the system `plasmashell` finds our
