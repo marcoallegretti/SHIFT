@@ -79,6 +79,11 @@ void FavouritesModel::removeEntry(int row)
 
 bool FavouritesModel::addApplication(const QString &storageId)
 {
+    return addApplicationAt(m_delegates.size(), storageId);
+}
+
+bool FavouritesModel::addApplicationAt(int row, const QString &storageId)
+{
     if (containsApplication(storageId)) {
         return false;
     }
@@ -90,7 +95,7 @@ bool FavouritesModel::addApplication(const QString &storageId)
 
     auto app = std::make_shared<FolioApplication>(service);
     auto delegate = std::make_shared<FolioDelegate>(app);
-    return addEntry(m_delegates.size(), delegate);
+    return addEntry(row, delegate);
 }
 
 bool FavouritesModel::containsApplication(const QString &storageId) const

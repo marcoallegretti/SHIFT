@@ -62,6 +62,65 @@ MouseArea {
         return Math.max(0, Math.min(repeater.count - 1, dragReorderIndex + shift))
     }
 
+    // Drag-to-pin state for running tasks in convergence mode.
+    property int taskPinDragIndex: -1
+    property real taskPinDragOffset: 0
+    property int taskPinTargetIndex: -1
+    property string taskPinStorageId: ""
+    readonly property bool taskPinCanDrop: taskPinTargetIndex !== -1 && taskPinStorageId !== ""
+
+    function runningTaskStorageId(taskModel) {
+        var id = taskModel ? taskModel.AppId || "" : ""
+        if (id && !id.endsWith(".desktop"))
+            id += ".desktop"
+        return id
+    }
+
+    function favouriteBaseX(index) {
+        return index * root.dockCellWidth - (root.totalItemCount / 2) * root.dockCellWidth + root.dockCenterX - root.spacerWidth / 2
+    }
+
+    function taskBaseX(index) {
+        return (repeater.count + index) * root.dockCellWidth - (root.totalItemCount / 2) * root.dockCellWidth + root.dockCenterX + root.spacerWidth / 2
+    }
+
+    function clearTaskPinDrag() {
+        root.taskPinDragIndex = -1
+        root.taskPinDragOffset = 0
+        root.taskPinTargetIndex = -1
+        root.taskPinStorageId = ""
+    }
+
+    function updateTaskPinTarget() {
+        if (root.taskPinDragIndex === -1 || root.taskPinStorageId === "" || folio.FolioSettings.lockLayout || folio.FavouritesModel.containsApplication(root.taskPinStorageId)) {
+            root.taskPinTargetIndex = -1
+            return
+        }
+
+        var draggedCenterX = root.taskBaseX(root.taskPinDragIndex) + root.dockCellWidth / 2 + root.taskPinDragOffset
+        var firstTaskCenterX = root.taskBaseX(0) + root.dockCellWidth / 2
+
+        if (draggedCenterX >= firstTaskCenterX) {
+            root.taskPinTargetIndex = -1
+            return
+        }
+
+        if (repeater.count === 0) {
+            root.taskPinTargetIndex = 0
+            return
+        }
+
+        for (let index = 0; index < repeater.count; ++index) {
+            let favouriteCenterX = root.favouriteBaseX(index) + root.dockCellWidth / 2
+            if (draggedCenterX < favouriteCenterX) {
+                root.taskPinTargetIndex = index
+                return
+            }
+        }
+
+        root.taskPinTargetIndex = repeater.count
+    }
+
     // Home button (convergence mode, left end)
     Rectangle {
         id: homeButton
@@ -226,7 +285,9 @@ MouseArea {
                 NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
             }
 
-            x: (isLocationBottom ? centerPosition + root.dockCenterX - root.spacerWidth / 2 : (parent.width - width) / 2) + dragVisualShift
+            property real taskPinVisualShift: root.taskPinCanDrop && delegate.index >= root.taskPinTargetIndex ? root.dockCellWidth : 0
+
+            x: (isLocationBottom ? root.favouriteBaseX(delegate.index) : (parent.width - width) / 2) + dragVisualShift + taskPinVisualShift
             y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
 
             implicitWidth: root.dockCellWidth
@@ -743,6 +804,17 @@ MouseArea {
         opacity: 0.4
     }
 
+    PlaceholderDelegate {
+        id: taskPinPlaceholder
+        visible: root.taskPinCanDrop
+        folio: root.folio
+        width: root.dockCellWidth
+        height: root.dockCellHeight
+        x: root.favouriteBaseX(root.taskPinTargetIndex)
+        y: (parent.height - height) / 2
+        z: 1
+    }
+
     Repeater {
         id: taskRepeater
         model: root.convergenceMode ? tasksModel : null
@@ -754,6 +826,7 @@ MouseArea {
             required property var model
 
             readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
+            readonly property string taskStorageId: root.runningTaskStorageId(taskDelegate.model)
 
             // Position after all favourites
             property double fromCenterValue: (repeater.count + taskDelegate.index) - (root.totalItemCount / 2)
@@ -763,8 +836,9 @@ MouseArea {
 
             readonly property int centerPosition: (isLocationBottom ? root.dockCellWidth : root.dockCellHeight) * fromCenterValue
 
-            x: isLocationBottom ? centerPosition + root.dockCenterX + root.spacerWidth / 2 : (parent.width - width) / 2
+            x: isLocationBottom ? root.taskBaseX(taskDelegate.index) + (root.taskPinDragIndex === taskDelegate.index ? root.taskPinDragOffset : 0) : (parent.width - width) / 2
             y: isLocationBottom ? (parent.height - height) / 2 : parent.height / 2 - centerPosition - root.dockCellHeight
+            z: root.taskPinDragIndex === taskDelegate.index ? 2 : 0
 
             implicitWidth: root.dockCellWidth
             implicitHeight: root.dockCellHeight
@@ -787,6 +861,45 @@ MouseArea {
                 height: width
                 source: taskDelegate.model.decoration
                 active: taskMouseArea.containsMouse
+            }
+
+            DragHandler {
+                id: taskDragHandler
+                target: null
+                xAxis.enabled: true
+                yAxis.enabled: false
+                enabled: root.convergenceMode && taskDelegate.isLocationBottom && !folio.FolioSettings.lockLayout && taskDelegate.taskStorageId !== "" && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId)
+
+                onActiveChanged: {
+                    if (active) {
+                        thumbnailPopup.close()
+                        thumbnailShowTimer.stop()
+                        thumbnailHideTimer.stop()
+                        root.hoveredTaskIndex = -1
+                        root.taskPinDragIndex = taskDelegate.index
+                        root.taskPinDragOffset = 0
+                        root.taskPinTargetIndex = -1
+                        root.taskPinStorageId = taskDelegate.taskStorageId
+                    } else if (root.taskPinDragIndex === taskDelegate.index) {
+                        if (root.taskPinCanDrop) {
+                            folio.FavouritesModel.addApplicationAt(root.taskPinTargetIndex, root.taskPinStorageId)
+                        }
+                        root.clearTaskPinDrag()
+                    }
+                }
+
+                onTranslationChanged: {
+                    if (root.taskPinDragIndex === taskDelegate.index) {
+                        root.taskPinDragOffset = translation.x
+                        root.updateTaskPinTarget()
+                    }
+                }
+
+                onCanceled: {
+                    if (root.taskPinDragIndex === taskDelegate.index) {
+                        root.clearTaskPinDrag()
+                    }
+                }
             }
 
             // Window indicator dots (one per sibling window of the same app)
@@ -873,20 +986,13 @@ MouseArea {
                 id: taskContextMenu
                 popupType: T.Popup.Window
 
-                property string taskStorageId: {
-                    var id = taskDelegate.model.AppId || ""
-                    if (id && !id.endsWith(".desktop"))
-                        id += ".desktop"
-                    return id
-                }
-
                 PC3.MenuItem {
                     icon.name: "window-pin"
                     text: i18n("Pin to Dock")
                     // repeater.count dependency forces re-evaluation when favourites change
-                    visible: taskContextMenu.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskContextMenu.taskStorageId)
+                    visible: taskDelegate.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId)
                     enabled: !folio.FolioSettings.lockLayout
-                    onClicked: folio.FavouritesModel.addApplication(taskContextMenu.taskStorageId)
+                    onClicked: folio.FavouritesModel.addApplication(taskDelegate.taskStorageId)
                 }
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"

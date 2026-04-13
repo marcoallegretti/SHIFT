@@ -43,6 +43,7 @@ public:
 
     Q_INVOKABLE void removeEntry(int row);
     Q_INVOKABLE bool addApplication(const QString &storageId);
+    Q_INVOKABLE bool addApplicationAt(int row, const QString &storageId);
     Q_INVOKABLE bool containsApplication(const QString &storageId) const;
     Q_INVOKABLE void moveEntry(int fromRow, int toRow);
     bool canAddEntry(int row, std::shared_ptr<FolioDelegate> delegate);
