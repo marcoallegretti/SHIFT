@@ -171,10 +171,9 @@ Create `preview.sh` in the project root:
 #!/usr/bin/env bash
 # Launch Shift in a nested KWin window for testing.
 #
-# kwin_wayland --exit-with-session takes exactly ONE path argument (no
-# extra args), and passing distrobox inline causes argument mangling.
-# So this script writes a small inner launcher to a temp file and points
-# --exit-with-session at it.  The temp file is cleaned up on exit.
+# kwin_wayland runs on the host (needs direct GPU access) with the project
+# prefix paths so it can load the convergentwindows KWin script and resolve
+# its QML imports.  plasmashell runs inside the distrobox container.
 #
 # Usage:  ./preview.sh [WIDTHxHEIGHT]
 #   e.g.  ./preview.sh              # 1280x720
@@ -186,6 +185,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SIZE="${1:-1280x720}"
 WIDTH="${SIZE%%x*}"
 HEIGHT="${SIZE##*x}"
+
+PREFIX="$SCRIPT_DIR/.prefix"
 
 # Write an ephemeral inner launcher (kwin needs a single executable path)
 INNER=$(mktemp /tmp/shift-inner.XXXXXX.sh)
@@ -210,6 +211,15 @@ exec plasmashell --replace -p org.kde.plasma.mobileshell
 '
 ENDSCRIPT
 
+# Expose the project prefix to the host kwin_wayland so it can find
+# KWin scripts (convergentwindows) and their QML dependencies.
+# Also overlay ~/.config/plasma-mobile so KWin reads the mobile kwinrc
+# (envmanager writes convergentwindowsEnabled, Placement, etc. there).
+export XDG_DATA_DIRS="$PREFIX/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+export XDG_CONFIG_DIRS="$HOME/.config/plasma-mobile:${XDG_CONFIG_DIRS:-/etc/xdg}"
+export QT_PLUGIN_PATH="$PREFIX/lib64/plugins:${QT_PLUGIN_PATH:-}"
+export QML2_IMPORT_PATH="$PREFIX/lib64/qml:${QML2_IMPORT_PATH:-}"
+
 exec dbus-run-session \
     kwin_wayland --xwayland \
         --socket shift-kwin \
@@ -224,13 +234,19 @@ Make it executable: `chmod +x preview.sh`.
 
 1. `dbus-run-session` spins up an isolated D-Bus session so the nested
    compositor doesn't clash with your running desktop.
-2. `kwin_wayland` opens a window on your current desktop and creates a
-   Wayland socket named `shift-kwin`.
-3. The inner script enters the distrobox, sources `prefix.sh` to put
+2. Four environment exports give the **host** `kwin_wayland` access to
+   the project's `.prefix` (KWin scripts, QML plugins) and to
+   `~/.config/plasma-mobile` (where envmanager writes convergence
+   settings like `convergentwindowsEnabled`, `Placement`, etc.).
+3. `kwin_wayland` opens a window on your current desktop and creates a
+   Wayland socket named `shift-kwin`.  Because of the exports it can
+   load the `convergentwindows` script, which handles maximising
+   windows on undock and restoring decorations on dock.
+4. The inner script enters the distrobox, sources `prefix.sh` to put
    the custom build first in all search paths, then starts
    `plasmashell` from the container's `/usr/bin/plasmashell` — but with
    our plugins loaded from `.prefix`.
-4. `--exit-with-session` makes kwin close when plasmashell exits, and
+5. `--exit-with-session` makes kwin close when plasmashell exits, and
    vice versa.
 
 ### Running it
@@ -375,7 +391,10 @@ Shift/
 │   ├── homescreens/folio/          # Folio homescreen applet
 │   ├── panel/                      # Status bar
 │   └── taskpanel/                  # Navigation bar / gesture panel
+├── envmanager/                     # Applies KWin/KDE config on convergence mode changes
 ├── quicksettings/                  # Action drawer quick-setting tiles
 ├── kcms/                           # System Settings modules
-└── kwin/                           # KWin task-switcher plugin
+└── kwin/
+    ├── mobiletaskswitcher/         # KWin task-switcher plugin
+    └── scripts/convergentwindows/  # KWin script: maximize on undock, restore borders on dock
 ```
