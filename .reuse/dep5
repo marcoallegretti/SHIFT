@@ -7,3 +7,7 @@ Files: *.json
 Copyright: Plasma-Mobile contributors
 License: GPL-2.0-or-later
 
+Files: HACKING.md
+Copyright: Plasma-Mobile contributors
+License: CC-BY-SA-4.0
+
