@@ -211,4 +211,23 @@ Item {
             }
         }
     }
+
+    // Down-arrow hover hint for convergence mode
+    Kirigami.Icon {
+        z: 2
+        source: 'arrow-down'
+        implicitHeight: Kirigami.Units.iconSizes.small
+        implicitWidth: Kirigami.Units.iconSizes.small
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Kirigami.Units.smallSpacing
+
+        visible: ShellSettings.Settings.convergenceModeEnabled
+        opacity: statusBarHover.hovered ? 0.8 : 0
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration }
+        }
+    }
 }
