@@ -145,11 +145,16 @@ ContainmentItem {
     // desktop) with an exclusive zone equal to the dock height so that KWin
     // shrinks MaximizeArea accordingly.  Input-transparent so clicks fall
     // through to the homescreen dock underneath.
-    // When a window is maximized the exclusive zone drops to 0 so the
-    // window reclaims the full screen while the dock auto-hides.
+    // When auto-hide is enabled and a window is maximized the surface is
+    // destroyed so the strut is removed and the window reclaims the full
+    // screen.  Dynamic exclusive-zone changes alone are not enough because
+    // the contentless surface never repaints, so the Wayland commit that
+    // would apply the new zone never happens.
     Window {
         id: dockSpaceReserver
         visible: ShellSettings.Settings.convergenceModeEnabled
+                 && !(ShellSettings.Settings.autoHidePanelsEnabled
+                      && windowMaximizedTracker.showingWindow)
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
         // height is set by layer-shell anchoring; provide a fallback.
@@ -159,7 +164,7 @@ ContainmentItem {
         LayerShell.Window.scope: "dock-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: windowMaximizedTracker.showingWindow ? 0 : Kirigami.Units.gridUnit * 3
+        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 

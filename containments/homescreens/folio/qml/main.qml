@@ -181,7 +181,8 @@ ContainmentItem {
         property real dockOffset: 0
         readonly property real dockHeight: Kirigami.Units.gridUnit * 3
         readonly property bool dockHovered: dockHoverHandler.hovered
-        readonly property bool shouldHide: windowMaximizedTracker.showingWindow && !dockHovered
+        readonly property bool shouldHide: ShellSettings.Settings.autoHidePanelsEnabled
+                                              && windowMaximizedTracker.showingWindow && !dockHovered
 
         onShouldHideChanged: {
             if (shouldHide) {
