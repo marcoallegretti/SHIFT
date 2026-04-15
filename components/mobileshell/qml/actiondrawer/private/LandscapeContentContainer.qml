@@ -48,7 +48,13 @@ Item {
             width: intendedWidth
 
             readonly property real columnWidth: 6 * Kirigami.Units.gridUnit
-            readonly property real intendedWidth: (columnWidth * ShellSettings.Settings.quickSettingsColumns) + Kirigami.Units.gridUnit
+            // In convergence mode, use up to 45% of screen width so more
+            // tiles are visible without pagination.
+            readonly property int convergenceColumns: Math.min(6, Math.floor(root.width * 0.45 / columnWidth))
+            readonly property int effectiveColumns: ShellSettings.Settings.convergenceModeEnabled
+                ? Math.max(ShellSettings.Settings.quickSettingsColumns, convergenceColumns)
+                : ShellSettings.Settings.quickSettingsColumns
+            readonly property real intendedWidth: (columnWidth * effectiveColumns) + Kirigami.Units.gridUnit
 
             property real offsetRatio: quickSettingsPanel.height / root.height
             anchors.topMargin: Math.min(root.actionDrawer.offsetResistance * offsetRatio - quickSettingsPanel.height, 0)
