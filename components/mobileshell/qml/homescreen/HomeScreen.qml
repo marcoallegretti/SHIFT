@@ -80,6 +80,13 @@ Item {
         target: MobileShellState.ShellDBusClient
 
         function onOpenHomeScreenRequested() {
+            if (ShellSettings.Settings.convergenceModeEnabled) {
+                // In convergence mode let the containment handle everything
+                // via homeTriggered → homeAction() without touching windows.
+                root.homeTriggered();
+                return;
+            }
+
             if (windowMaximizedTracker.showingWindow) {
                 itemContainer.zoomIn();
             }

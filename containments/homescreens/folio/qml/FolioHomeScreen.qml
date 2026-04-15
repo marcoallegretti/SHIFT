@@ -515,26 +515,22 @@ Item {
                 transform: Translate { y: folderView.opacity > 0 ? 0 : folderView.height }
             }
 
-            // Click-to-dismiss overlay for popup drawer in convergence mode
+            // Click-to-dismiss overlay (mobile only; convergence uses layer-shell overlay)
             MouseArea {
                 anchors.fill: parent
-                anchors.bottomMargin: ShellSettings.Settings.convergenceModeEnabled ? favouritesBar.height : 0
-                visible: ShellSettings.Settings.convergenceModeEnabled && homeScreenState.appDrawerOpenProgress > 0
+                visible: !ShellSettings.Settings.convergenceModeEnabled
+                         && homeScreenState.appDrawerOpenProgress > 0
                 onClicked: folio.HomeScreenState.closeAppDrawer()
             }
 
-            // bottom app drawer
+            // bottom app drawer (mobile only; convergence uses layer-shell overlay)
             AppDrawer {
                 id: appDrawer
                 folio: root.folio
+                visible: !ShellSettings.Settings.convergenceModeEnabled
 
-                // Convergence: popup above dock; mobile: full-screen
-                property bool isPopup: ShellSettings.Settings.convergenceModeEnabled
-                property real popupWidth: Math.min(Kirigami.Units.gridUnit * 28, parent.width * 0.5)
-                property real popupHeight: Math.min(Kirigami.Units.gridUnit * 32, parent.height * 0.7)
-
-                width: isPopup ? popupWidth : parent.width
-                height: isPopup ? popupHeight : parent.height
+                width: parent.width
+                height: parent.height
 
                 homeScreen: root
 
@@ -544,20 +540,11 @@ Item {
                 // position for animation
                 property real animationY: (1 - homeScreenState.appDrawerOpenProgress) * (Kirigami.Units.gridUnit * 2)
 
-                // Convergence popup position: above dock, left-aligned
-                property real popupX: root.leftMargin + Kirigami.Units.smallSpacing
-                property real popupY: (opacity > 0)
-                    ? parent.height - favouritesBar.height - popupHeight - Kirigami.Units.smallSpacing + animationY
-                    : parent.height
-
                 // Full-screen position
-                property real fullX: 0
-                property real fullY: (opacity > 0) ? animationY : parent.height
+                x: 0
+                y: (opacity > 0) ? animationY : parent.height
 
-                x: isPopup ? popupX : fullX
-                y: isPopup ? popupY : fullY
-
-                headerHeight: Math.round(Kirigami.Units.gridUnit * (appDrawer.isPopup ? 3 : 4))
+                headerHeight: Math.round(Kirigami.Units.gridUnit * 4)
                 headerItem: AppDrawerHeader {
                     id: appDrawerHeader
                     folio: root.folio
@@ -565,11 +552,11 @@ Item {
                     onReleaseFocusRequested: appDrawer.forceActiveFocus()
                 }
 
-                // Account for panels (popup handles its own margins)
-                topPadding: appDrawer.isPopup ? 0 : root.topMargin
-                bottomPadding: appDrawer.isPopup ? 0 : root.bottomMargin
-                leftPadding: appDrawer.isPopup ? 0 : root.leftMargin
-                rightPadding: appDrawer.isPopup ? 0 : root.rightMargin
+                // Account for panels
+                topPadding: root.topMargin
+                bottomPadding: root.bottomMargin
+                leftPadding: root.leftMargin
+                rightPadding: root.rightMargin
 
                 // Forward keyboard text to the search bar
                 Keys.onPressed: (event) => {

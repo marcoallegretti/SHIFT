@@ -85,19 +85,36 @@ ContainmentItem {
             MobileShellState.ShellDBusClient.closeActionDrawer();
         }
 
-        if (isInWindow) {
-            // Only minimize windows and go to homescreen when not in docked mode
-            if (!ShellSettings.Settings.convergenceModeEnabled) {
-                folio.HomeScreenState.closeFolder();
-                folio.HomeScreenState.closeSearchWidget();
-                folio.HomeScreenState.closeAppDrawer();
-                folio.HomeScreenState.goToPage(0, false);
-
-                WindowPlugin.WindowUtil.minimizeAll();
-            } else {
-                // In convergence mode, toggle "show desktop" (minimize all to reveal homescreen)
-                WindowPlugin.WindowUtil.minimizeAll();
+        if (ShellSettings.Settings.convergenceModeEnabled) {
+            // Convergence: toggle the app drawer as a layer-shell overlay
+            // without disturbing open windows.
+            switch (folio.HomeScreenState.viewState) {
+                case Folio.HomeScreenState.AppDrawerView:
+                    folio.HomeScreenState.closeAppDrawer();
+                    break;
+                case Folio.HomeScreenState.FolderView:
+                    folio.HomeScreenState.closeFolder();
+                    break;
+                case Folio.HomeScreenState.SearchWidgetView:
+                    folio.HomeScreenState.closeSearchWidget();
+                    break;
+                case Folio.HomeScreenState.SettingsView:
+                    folio.HomeScreenState.closeSettingsView();
+                    break;
+                default:
+                    folio.HomeScreenState.openAppDrawer();
+                    break;
             }
+            return;
+        }
+
+        if (isInWindow) {
+            folio.HomeScreenState.closeFolder();
+            folio.HomeScreenState.closeSearchWidget();
+            folio.HomeScreenState.closeAppDrawer();
+            folio.HomeScreenState.goToPage(0, false);
+
+            WindowPlugin.WindowUtil.minimizeAll();
 
             // Always ensure settings view is closed
             if (folio.HomeScreenState.viewState == Folio.HomeScreenState.SettingsView) {
@@ -107,7 +124,7 @@ ContainmentItem {
         } else { // If we are already on the homescreen
             switch (folio.HomeScreenState.viewState) {
                 case Folio.HomeScreenState.PageView:
-                    if (ShellSettings.Settings.convergenceModeEnabled || folio.HomeScreenState.currentPage === 0) {
+                    if (folio.HomeScreenState.currentPage === 0) {
                         folio.HomeScreenState.openAppDrawer();
                     } else {
                         folio.HomeScreenState.goToPage(0, false);
@@ -218,6 +235,82 @@ ContainmentItem {
             maskManager: root.maskManager
             homeScreen: folioHomeScreen
             transform: Translate { y: dockOverlay.dockOffset }
+        }
+    }
+
+    // App-drawer overlay — renders the popup drawer above application
+    // windows in convergence mode.  Same pattern as the dock overlay:
+    // a fullscreen layer-shell surface at LayerTop so that it appears
+    // over normal windows without minimizing them.
+    Window {
+        id: drawerOverlay
+        visible: ShellSettings.Settings.convergenceModeEnabled
+                 && folio.HomeScreenState.appDrawerOpenProgress > 0
+        color: "transparent"
+        width: Screen.width
+        height: Screen.height
+
+        LayerShell.Window.scope: "drawer-overlay"
+        LayerShell.Window.layer: LayerShell.Window.LayerTop
+        LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorBottom
+                                   | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
+        LayerShell.Window.exclusionZone: -1
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
+
+        // Click outside the popup to dismiss
+        MouseArea {
+            anchors.fill: parent
+            onClicked: folio.HomeScreenState.closeAppDrawer()
+        }
+
+        AppDrawer {
+            id: overlayDrawer
+            folio: root.folio
+            homeScreen: folioHomeScreen
+
+            readonly property real popupWidth: Math.min(Kirigami.Units.gridUnit * 28, parent.width * 0.5)
+            readonly property real popupHeight: Math.min(Kirigami.Units.gridUnit * 32, parent.height * 0.7)
+            readonly property real dockHeight: Kirigami.Units.gridUnit * 3
+
+            width: popupWidth
+            height: popupHeight
+
+            opacity: folio.HomeScreenState.appDrawerOpenProgress < 0.5
+                ? 0 : (folio.HomeScreenState.appDrawerOpenProgress - 0.5) * 2
+
+            property real animationY: (1 - folio.HomeScreenState.appDrawerOpenProgress) * (Kirigami.Units.gridUnit * 2)
+
+            x: Kirigami.Units.smallSpacing
+            y: (opacity > 0)
+                ? parent.height - dockHeight - popupHeight - Kirigami.Units.smallSpacing + animationY
+                : parent.height
+
+            headerHeight: Math.round(Kirigami.Units.gridUnit * 3)
+            headerItem: AppDrawerHeader {
+                id: overlayDrawerHeader
+                folio: root.folio
+                onReleaseFocusRequested: overlayDrawer.forceActiveFocus()
+            }
+
+            Keys.onPressed: (event) => {
+                if (event.text.trim().length > 0) {
+                    overlayDrawerHeader.addSearchText(event.text);
+                    overlayDrawerHeader.forceActiveFocus();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right
+                           || event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                    overlayDrawerHeader.forceActiveFocus();
+                    event.accepted = true;
+                }
+            }
+
+            Connections {
+                target: folio.HomeScreenState
+
+                function onAppDrawerOpened() {
+                    overlayDrawer.forceActiveFocus();
+                }
+            }
         }
     }
 
