@@ -33,6 +33,10 @@ Item {
         target: MobileShellState.ShellDBusClient
 
         function onOpenActionDrawerRequested() {
+            if (ShellSettings.Settings.convergenceModeEnabled) {
+                drawer.actionDrawer.openToPinnedMode = false;
+                drawer.actionDrawer.intendedToBeVisible = true;
+            }
             drawer.actionDrawer.open();
         }
 
@@ -129,6 +133,8 @@ Item {
             if (drawer.actionDrawer.intendedToBeVisible) {
                 drawer.actionDrawer.close();
             } else {
+                drawer.actionDrawer.openToPinnedMode = false;
+                drawer.actionDrawer.intendedToBeVisible = true;
                 drawer.actionDrawer.open();
             }
         }

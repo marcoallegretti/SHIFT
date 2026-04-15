@@ -34,8 +34,9 @@ MobileShell.SwipeArea {
     }
 
     function startSwipeWithPoint(point) {
-        // if the user swiped from the top left, otherwise it's from the top right
-        if (point.x < root.width / 2) {
+        if (ShellSettings.Settings.convergenceModeEnabled) {
+            actionDrawer.openToPinnedMode = false;
+        } else if (point.x < root.width / 2) {
             actionDrawer.openToPinnedMode = ShellSettings.Settings.actionDrawerTopLeftMode == ShellSettings.Settings.Pinned;
         } else {
             actionDrawer.openToPinnedMode = ShellSettings.Settings.actionDrawerTopRightMode == ShellSettings.Settings.Pinned;
@@ -69,6 +70,8 @@ MobileShell.SwipeArea {
             if (actionDrawer.intendedToBeVisible) {
                 actionDrawer.close();
             } else {
+                actionDrawer.openToPinnedMode = false;
+                actionDrawer.intendedToBeVisible = true;
                 actionDrawer.open();
             }
         }

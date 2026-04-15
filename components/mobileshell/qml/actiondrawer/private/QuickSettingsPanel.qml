@@ -100,6 +100,7 @@ MobileShell.BaseItem {
             id: handle
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
+            visible: !ShellSettings.Settings.convergenceModeEnabled
             opacity: brightnessPressedValue
         }
     }
