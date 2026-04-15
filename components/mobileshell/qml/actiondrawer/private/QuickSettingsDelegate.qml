@@ -14,6 +14,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.private.nanoshell 2.0 as NanoShell
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.plasma.components 3.0 as PlasmaComponents
 
 MobileShell.BaseItem {
@@ -30,6 +31,7 @@ MobileShell.BaseItem {
     required property var toggleFunction
 
     signal closeRequested()
+    signal detailRequested(string pluginId)
 
     // set by children
     property var iconItem
@@ -88,7 +90,25 @@ MobileShell.BaseItem {
         }
     }
 
+    // Map quick-setting settingsCommand → desktop Plasma applet pluginId.
+    // Only tiles listed here get an inline detail popup in convergence mode.
+    readonly property var __appletForCommand: ({
+        "plasma-open-settings kcm_mobile_wifi": "org.kde.plasma.networkmanagement",
+        "plasma-open-settings kcm_bluetooth": "org.kde.plasma.bluetooth",
+        "plasma-open-settings kcm_pulseaudio": "org.kde.plasma.volume",
+        "plasma-open-settings kcm_mobile_power": "org.kde.plasma.battery",
+    })
+
     function delegatePressAndHold() {
+        // In convergence mode, show inline detail popup if available.
+        if (ShellSettings.Settings.convergenceModeEnabled && root.settingsCommand) {
+            let pluginId = __appletForCommand[root.settingsCommand];
+            if (pluginId) {
+                root.detailRequested(pluginId);
+                return;
+            }
+        }
+
         if (root.settingsCommand && !root.restrictedPermissions) {
             closeRequested();
             MobileShellState.ShellDBusClient.openAppLaunchAnimationWithPosition(

@@ -5,6 +5,8 @@ ecm_add_qml_module(mobileshellplugin URI org.kde.plasma.private.mobileshell GENE
 
 set(mobileshellplugin_SRCS
     shellutil.cpp
+    components/applethost.cpp
+    components/applethost.h
     components/direction.cpp
     components/direction.h
     components/swipearea.cpp
@@ -137,6 +139,7 @@ ecm_target_qml_sources(mobileshellplugin SOURCES
     qml/actiondrawer/private/QuickSettingsMinimizedDelegate.qml
     qml/actiondrawer/private/QuickSettingsPanel.qml
     qml/actiondrawer/private/ContentContainer.qml
+    qml/actiondrawer/private/DetailPopup.qml
     qml/actiondrawer/private/LandscapeContentContainer.qml
     qml/actiondrawer/private/NotificationDrawer.qml
     qml/actiondrawer/private/PortraitContentContainer.qml

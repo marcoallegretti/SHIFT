@@ -109,6 +109,9 @@ Item {
                     onCloseRequested: {
                         actionDrawer.close();
                     }
+                    onDetailRequested: (pluginId) => {
+                        detailPopup.show(pluginId);
+                    }
                 }
             }
         }
@@ -173,6 +176,9 @@ Item {
                                     onCloseRequested: {
                                         actionDrawer.close();
                                     }
+                                    onDetailRequested: (pluginId) => {
+                                        detailPopup.show(pluginId);
+                                    }
                                 }
                             }
                         }
@@ -221,6 +227,11 @@ Item {
             Layout.rightMargin: Kirigami.Units.smallSpacing
             Layout.fillWidth: true
         }
+    }
+
+    DetailPopup {
+        id: detailPopup
+        parent: root.Window.window ? root.Window.window.contentItem : root
     }
 
 }
