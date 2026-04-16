@@ -54,6 +54,16 @@ Item {
     readonly property int pageSize: rowCount * columnCount
     readonly property int quickSettingsCount: quickSettingsModel.count
 
+    // Management tiles — promoted to full-width status rows in convergence.
+    readonly property var __managementCommands: ({
+        "plasma-open-settings kcm_mobile_wifi": "org.kde.plasma.networkmanagement",
+        "plasma-open-settings kcm_bluetooth": "org.kde.plasma.bluetooth",
+        "plasma-open-settings kcm_pulseaudio": "org.kde.plasma.volume",
+        "plasma-open-settings kcm_mobile_power": "org.kde.plasma.battery",
+    })
+    readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
+    function isManagementTile(cmd) { return cmd in __managementCommands; }
+
     readonly property alias brightnessPressedValue: brightnessItem.brightnessPressedValue
 
     function resetSwipeView() {
@@ -126,6 +136,34 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
 
+        // Management status rows (convergence mode only)
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.smallSpacing
+            Layout.rightMargin: Kirigami.Units.smallSpacing
+            Layout.bottomMargin: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.smallSpacing
+            visible: root.isConvergence
+
+            Repeater {
+                model: root.quickSettingsModel
+                delegate: QuickSettingsStatusRow {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    visible: root.isManagementTile(modelData.settingsCommand)
+                    text: modelData.text
+                    status: modelData.status
+                    icon: modelData.icon
+                    enabled: modelData.enabled
+                    toggleFunction: modelData.toggle
+                    onDetailClicked: {
+                        let pluginId = root.__managementCommands[modelData.settingsCommand];
+                        if (pluginId) detailPopup.show(pluginId);
+                    }
+                }
+            }
+        }
+
         // Quick settings view
         ColumnLayout {
             Layout.fillWidth: true
@@ -159,8 +197,10 @@ Item {
                             delegate: MobileShell.BaseItem {
                                 required property var modelData
 
-                                height: root.rowHeight
-                                width: root.columnWidth
+                                readonly property bool __hidden: root.isConvergence && root.isManagementTile(modelData.settingsCommand)
+                                height: __hidden ? 0 : root.rowHeight
+                                width: __hidden ? 0 : root.columnWidth
+                                visible: !__hidden
                                 padding: Kirigami.Units.smallSpacing
 
                                 contentItem: QuickSettingsFullDelegate {
