@@ -11,6 +11,7 @@ import QtQuick.Layouts 1.1
 import org.kde.plasma.clock
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.private.mobileshell as MobileShell
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.kirigami as Kirigami
 
 Item {
@@ -24,14 +25,26 @@ Item {
     property alias notificationWidget: notificationWidget
     property real contentY: notificationWidget.listView.contentY
 
-    property real topPadding: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? Kirigami.Units.largeSpacing : date.y + date.height + Kirigami.Units.smallSpacing * 6
+    property real topPadding: {
+        if (actionDrawer.mode == MobileShell.ActionDrawer.Portrait)
+            return Kirigami.Units.largeSpacing;
+        if (ShellSettings.Settings.convergenceModeEnabled)
+            return Kirigami.Units.largeSpacing;
+        return date.y + date.height + Kirigami.Units.smallSpacing * 6;
+    }
     property real topMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? actionDrawer.offsetResistance + 1 : 0
 
     readonly property real minWidthHeight: Math.min(actionDrawer.width, actionDrawer.height)
     readonly property bool hasNotifications: notificationWidget.hasNotifications
     readonly property bool listOverflowing: notificationWidget.listView.listOverflowing
 
-    height: Math.min(actionDrawer.height - toolButtons.height, notificationWidget.listView.contentHeight + 10 + topMargin)
+    // External cap for convergence mode; -1 means uncapped.
+    property real maximumHeight: -1
+
+    height: {
+        let h = Math.min(actionDrawer.height - toolButtons.height, notificationWidget.listView.contentHeight + 10 + topMargin);
+        return maximumHeight > 0 ? Math.min(h, maximumHeight) : h;
+    }
 
     // time source for the time and date whenin landscape mode
     Clock {
@@ -155,6 +168,7 @@ Item {
         id: landscapeModeHeader
         anchors.fill: parent
         visible: actionDrawer.mode != MobileShell.ActionDrawer.Portrait
+                 && !ShellSettings.Settings.convergenceModeEnabled
 
         transform: [
             Translate {

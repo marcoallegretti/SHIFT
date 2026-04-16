@@ -11,6 +11,7 @@ import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.private.mobileshell.quicksettingsplugin as QS
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 /**
  * Root element that contains all the ActionDrawer's contents, and is anchored to the screen.
@@ -62,7 +63,10 @@ Item {
                        Kirigami.Theme.backgroundColor.b,
                        0.9)
         Behavior on color { ColorAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutQuad } }
-        opacity: Math.max(0, Math.min(brightnessPressedValue, actionDrawer.offset / root.minimizedQuickSettingsOffset))
+        opacity: {
+            let base = Math.max(0, Math.min(brightnessPressedValue, actionDrawer.offset / root.minimizedQuickSettingsOffset));
+            return ShellSettings.Settings.convergenceModeEnabled ? base * 0.3 : base;
+        }
     }
 
     // The base swipe area.
@@ -106,8 +110,8 @@ Item {
 
             anchors {
                 topMargin: notificationDrawer.height + 1
-                leftMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : 10
-                rightMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : notificationDrawer.notificationWidget.anchors.rightMargin + Kirigami.Units.gridUnit - notificationDrawer.anchors.leftMargin + 370
+                leftMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : (notificationDrawer.isConvergence ? Kirigami.Units.smallSpacing : 10)
+                rightMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : (notificationDrawer.isConvergence ? parent.width * 0.5 : notificationDrawer.notificationWidget.anchors.rightMargin + Kirigami.Units.gridUnit - notificationDrawer.anchors.leftMargin + 370)
                 top: parent.top
                 left: parent.left
                 right: parent.right
@@ -160,19 +164,28 @@ Item {
     NotificationDrawer {
         id: notificationDrawer
 
+        readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
+
         swipeArea: swipeAreaPortrait
         actionDrawer: root.actionDrawer
         mediaControlsWidget: root.mediaControlsWidget
         contentContainer: root
-        opacity: Math.max(0, Math.min(root.brightnessPressedValue, actionDrawer.offsetResistance / root.minimizedQuickSettingsOffset))
+        opacity: {
+            let base = Math.max(0, Math.min(root.brightnessPressedValue, actionDrawer.offsetResistance / root.minimizedQuickSettingsOffset));
+            return isConvergence ? Math.max(0, Math.min(1, actionDrawer.offset / root.minimizedQuickSettingsOffset)) : base;
+        }
 
         anchors {
             top: parent.top
             left: parent.left
             right: parent.right
-            rightMargin: root.actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : 360
-            leftMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : notificationDrawer.minWidthHeight * 0.06
+            topMargin: isConvergence ? Kirigami.Units.smallSpacing : 0
+            rightMargin: root.actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : (isConvergence ? parent.width * 0.5 : 360)
+            leftMargin: actionDrawer.mode == MobileShell.ActionDrawer.Portrait ? 0 : (isConvergence ? Kirigami.Units.smallSpacing : notificationDrawer.minWidthHeight * 0.06)
         }
+
+        // In convergence, cap the height so it doesn't stretch full-screen
+        maximumHeight: isConvergence ? root.height * 0.6 : -1
     }
 
     // Secondary swipe area for uses in portrait.

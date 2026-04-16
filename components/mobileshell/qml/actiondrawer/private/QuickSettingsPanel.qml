@@ -73,9 +73,11 @@ MobileShell.BaseItem {
                 id: statusBarProxy
                 Layout.alignment: Qt.AlignTop
                 Layout.fillWidth: true
+                // Hide status bar in convergence — already visible in the top panel
+                visible: !ShellSettings.Settings.convergenceModeEnabled
                 // Align these to double pixels to aid vertical alignment and sharper icon rendering
-                Layout.preferredHeight: Math.round(Kirigami.Units.gridUnit * 1.5 * ShellSettings.Settings.statusBarScaleFactor / 2) * 2
-                Layout.maximumHeight: Math.round(Kirigami.Units.gridUnit * 1.5 * ShellSettings.Settings.statusBarScaleFactor / 2) * 2
+                Layout.preferredHeight: visible ? Math.round(Kirigami.Units.gridUnit * 1.5 * ShellSettings.Settings.statusBarScaleFactor / 2) * 2 : 0
+                Layout.maximumHeight: visible ? Math.round(Kirigami.Units.gridUnit * 1.5 * ShellSettings.Settings.statusBarScaleFactor / 2) * 2 : 0
 
                 Kirigami.Theme.colorSet: Kirigami.Theme.Window
                 Kirigami.Theme.inherit: false

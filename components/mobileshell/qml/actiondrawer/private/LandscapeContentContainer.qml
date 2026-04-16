@@ -56,10 +56,14 @@ Item {
                 : ShellSettings.Settings.quickSettingsColumns
             readonly property real intendedWidth: (columnWidth * effectiveColumns) + Kirigami.Units.gridUnit
 
-            property real offsetRatio: quickSettingsPanel.height / root.height
-            anchors.topMargin: Math.min(root.actionDrawer.offsetResistance * offsetRatio - quickSettingsPanel.height, 0)
+            readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
+            property real offsetRatio: (quickSettingsPanel.height + restingTopMargin) / root.height
+            readonly property real restingTopMargin: isConvergence ? Kirigami.Units.smallSpacing : 0
+            anchors.topMargin: isConvergence ? restingTopMargin : Math.min(root.actionDrawer.offsetResistance * offsetRatio - quickSettingsPanel.height, 0)
             anchors.top: parent.top
             anchors.right: parent.right
+            anchors.rightMargin: isConvergence ? Kirigami.Units.smallSpacing : 0
+            opacity: isConvergence ? Math.max(0, Math.min(1, root.actionDrawer.offset / root.minimizedQuickSettingsOffset)) : 1
 
             actionDrawer: root.actionDrawer
             fullScreenHeight: root.height
