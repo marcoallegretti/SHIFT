@@ -2,9 +2,11 @@
 
  SHIFT is an open source shell built on KDE Plasma Mobile, designed to adapt fluidly to your computing needs across devices
 
-![App Drawer](screenshots/SHIFT-app_drawer.png)
-![Dock Pin to Dock](screenshots/SHIFT-dock-pin.png)
-![Touch Mode](screenshots/SHIFT-touch.png)
+### Desktop demos
+
+![Desktop overview](screenshots/quick_DesktopDemo.webm)
+![Docked mode](screenshots/quick_DesktopDemo_docked.webm)
+![Tiling](screenshots/quick_DesktopDemo_tilling.webm)
 
 Shift is a fork of [plasma-mobile](https://invent.kde.org/plasma/plasma-mobile).
 The upstream phone UI is untouched; convergence adds a layer on top.
