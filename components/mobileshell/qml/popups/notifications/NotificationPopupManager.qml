@@ -11,6 +11,7 @@ import QtQuick.Window
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 import org.kde.layershell 1.0 as LayerShell
 
@@ -31,6 +32,7 @@ Window {
     readonly property int popupWidth: Math.min(Kirigami.Units.gridUnit * 20, Screen.width - Kirigami.Units.gridUnit * 2)
     readonly property real openOffset: Kirigami.Units.gridUnit + Kirigami.Units.smallSpacing * 3
     readonly property int longestLength: Math.max(Screen.width, Screen.height)
+    readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
     property var keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
     LayerShell.Window.scope: "notification"
@@ -97,7 +99,13 @@ Window {
                 console.warn("popupNotification: could not retrieve current popup height - falling back to a default value")
             }
 
-            ShellUtil.setInputRegion(notificationPopupManager, Qt.rect((notificationPopupManager.width - notificationPopupManager.popupWidth - Kirigami.Units.gridUnit) / 2, openOffset - Kirigami.Units.gridUnit / 2, notificationPopupManager.popupWidth + Kirigami.Units.gridUnit, popupHeight + Kirigami.Units.gridUnit * ((notifications.count - notifications.currentPopupIndex > 1) ? 4 : 1)));
+            if (isConvergence) {
+                let regionX = notificationPopupManager.width - notificationPopupManager.popupWidth - Kirigami.Units.gridUnit * 4;
+                let regionY = Screen.height - openOffset - popupHeight - Kirigami.Units.gridUnit;
+                ShellUtil.setInputRegion(notificationPopupManager, Qt.rect(regionX, regionY, notificationPopupManager.popupWidth + Kirigami.Units.gridUnit * 2, popupHeight + Kirigami.Units.gridUnit * 2));
+            } else {
+                ShellUtil.setInputRegion(notificationPopupManager, Qt.rect((notificationPopupManager.width - notificationPopupManager.popupWidth - Kirigami.Units.gridUnit) / 2, openOffset - Kirigami.Units.gridUnit / 2, notificationPopupManager.popupWidth + Kirigami.Units.gridUnit, popupHeight + Kirigami.Units.gridUnit * ((notifications.count - notifications.currentPopupIndex > 1) ? 4 : 1)));
+            }
         }
     }
 
@@ -194,9 +202,12 @@ Window {
                 delegate: NotificationPopup {
                     id: popup
 
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    x: notificationPopupManager.isConvergence
+                        ? (parent.width - width - Kirigami.Units.gridUnit * 2)
+                        : (parent.width - width) / 2
                     z: notifications.count - index
 
+                    isConvergence: notificationPopupManager.isConvergence
                     popupWidth: notificationPopupManager.popupWidth
                     openOffset: notificationPopupManager.openOffset
 

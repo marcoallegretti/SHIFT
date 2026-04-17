@@ -27,6 +27,15 @@ Item {
     // 'popupWidth' and 'openOffset' is set by the 'notificationPopupManager'
     property int popupWidth
     property real openOffset
+    property bool isConvergence: false
+
+    // In convergence the popup enters from the bottom-right corner
+    readonly property real effectiveOpenOffset: isConvergence
+        ? (Screen.height - openOffset - popupHeight)
+        : openOffset
+    readonly property real effectiveClosedOffset: isConvergence
+        ? (Screen.height + Kirigami.Units.smallSpacing)
+        : closedOffset
 
     // calculate the position needed to at when the expanded drawer is active
     readonly property real fullOpenOffset: popupDrawerOpened ? aboveNotificationFullOffset + aboveNotificationHeight + Kirigami.Units.largeSpacing : 0
@@ -244,7 +253,7 @@ Item {
         waiting = false;
         inPopupDrawer = true;
         if (notificationPopup.popupDrawerOpened && notificationItem.state != "inDrawerClosed" && notificationItem.state != "open") {
-            notificationItem.offset = openOffset;
+            notificationItem.offset = effectiveOpenOffset;
             notificationItem.scale = 0.75;
             notificationItem.popupOpacity = 0.0;
         }
@@ -255,7 +264,7 @@ Item {
 
     function openPopup() {
         if (notificationPopup.popupDrawerOpened && notificationItem.state != "open" && notificationItem.state != "inDrawerClosed") {
-            notificationItem.offset = openOffset;
+            notificationItem.offset = effectiveOpenOffset;
             notificationItem.scale = 0.75;
             notificationItem.popupOpacity = 0.0;
         }
@@ -343,7 +352,7 @@ Item {
 
         onDismissRequested: closePopup(popupIndex)
 
-        property real offset: closedOffset
+        property real offset: notificationPopup.effectiveClosedOffset
         property real scale: 1.0
         property real popupOpacity: 1.0 // controls the opacity of the notification popup when outside the popup drawer
         property real drawerScale: {
@@ -365,6 +374,9 @@ Item {
             return Kirigami.Units.gridUnit * 0.5 * indexClamped;
         }
         property real drawerOpacity: {
+            if (notificationPopup.isConvergence && notificationPopup.inPopupDrawer) {
+                return 0;
+            }
             let index = notificationPopup.popupIndex - popupNotifications.currentPopupIndex;
             if (index > 2 && !notificationPopup.popupDrawerOpened) {
                 return 0; // make this popup invisible if it is below 3 other popups
@@ -399,7 +411,7 @@ Item {
             State {
                 name: "open"
                 PropertyChanges {
-                    target: notificationItem; offset: notificationPopup.openOffset
+                    target: notificationItem; offset: notificationPopup.effectiveOpenOffset
                 }
                 PropertyChanges {
                     target: notificationItem; scale: 1.0
@@ -411,7 +423,7 @@ Item {
             State {
                 name: "closeWithMove"
                 PropertyChanges {
-                    target: notificationItem; offset: notificationPopup.closedOffset
+                    target: notificationItem; offset: notificationPopup.effectiveClosedOffset
                 }
                 PropertyChanges {
                     target: notificationItem; scale: 1.0
@@ -423,7 +435,7 @@ Item {
             State {
                 name: "closeWithScale"
                 PropertyChanges {
-                    target: notificationItem; offset: notificationPopup.openOffset
+                    target: notificationItem; offset: notificationPopup.effectiveOpenOffset
                 }
                 PropertyChanges {
                     target: notificationItem; scale: 0.75
@@ -435,7 +447,7 @@ Item {
             State {
                 name: "inDrawerClosed"
                 PropertyChanges {
-                    target: notificationItem; offset: notificationPopup.openOffset
+                    target: notificationItem; offset: notificationPopup.effectiveOpenOffset
                 }
                 PropertyChanges {
                     target: notificationItem; scale: 1
@@ -556,15 +568,29 @@ Item {
                 startActive = false;
             }
             lastOffset = notificationPopup.dragOffset;
-            notificationPopup.dragOffset = calculateResistance(startDragOffset + (translation.y - startPosition), 0);
+            let rawOffset = startDragOffset + (translation.y - startPosition);
+            if (notificationPopup.isConvergence) {
+                notificationPopup.dragOffset = -calculateResistance(-rawOffset, 0);
+            } else {
+                notificationPopup.dragOffset = calculateResistance(rawOffset, 0);
+            }
         }
 
         onActiveChanged: {
             startActive = active;
             notificationPopup.preventDismissTimeout = true;
             if (!active && !(notificationItem.state == "closeWithScale" || notificationItem.state == "closeWithMove")) {
-                if ((lastOffset - notificationPopup.dragOffset > 1.0 && notificationPopup.dragOffset < 0) || (-(notificationPopup.openOffset - notificationPopup.closedOffset) / 4 > notificationPopup.dragOffset)) {
-                    // this code is called when the notification is swiped or dragged to the top.
+                let dominated = false;
+                if (notificationPopup.isConvergence) {
+                    // convergence: dismiss on swipe down
+                    dominated = (notificationPopup.dragOffset - lastOffset > 1.0 && notificationPopup.dragOffset > 0)
+                        || (notificationPopup.dragOffset > (notificationPopup.effectiveClosedOffset - notificationPopup.effectiveOpenOffset) / 4);
+                } else {
+                    // mobile: dismiss on swipe up
+                    dominated = (lastOffset - notificationPopup.dragOffset > 1.0 && notificationPopup.dragOffset < 0)
+                        || (-(notificationPopup.openOffset - notificationPopup.closedOffset) / 4 > notificationPopup.dragOffset);
+                }
+                if (dominated) {
                     notificationPopup.closedWithSwipe = true;
                     notificationPopup.closePopup(popupIndex);
                     return;
@@ -589,7 +615,7 @@ Item {
 
         height: Kirigami.Units.gridUnit * 2
 
-        enabled: !notificationPopup.popupDrawerOpened && (notificationPopup.popupCount - popupNotifications.currentPopupIndex > 1)
+        enabled: !notificationPopup.isConvergence && !notificationPopup.popupDrawerOpened && (notificationPopup.popupCount - popupNotifications.currentPopupIndex > 1)
 
         onReleased: {
             notificationPopup.openPopupDrawer();
