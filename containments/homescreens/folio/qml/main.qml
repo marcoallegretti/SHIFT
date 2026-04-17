@@ -223,9 +223,7 @@ ContainmentItem {
 
         Rectangle {
             anchors.fill: parent
-            Kirigami.Theme.inherit: false
-            Kirigami.Theme.colorSet: Kirigami.Theme.Window
-            color: Kirigami.Theme.backgroundColor
+            color: Qt.rgba(0, 0, 0, 0.5)
             transform: Translate { y: dockOverlay.dockOffset }
         }
 
