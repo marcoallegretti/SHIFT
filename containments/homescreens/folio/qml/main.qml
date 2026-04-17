@@ -18,6 +18,7 @@ import org.kde.plasma.private.mobileshell.windowplugin as WindowPlugin
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 import org.kde.layershell 1.0 as LayerShell
+import org.kde.plasma.private.sessions 2.0
 
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
@@ -309,6 +310,165 @@ ContainmentItem {
 
                 function onAppDrawerOpened() {
                     overlayDrawer.forceActiveFocus();
+                }
+            }
+        }
+
+        Rectangle {
+            id: powerPanel
+
+            readonly property real buttonHeight: Kirigami.Units.gridUnit * 5
+
+            width: Kirigami.Units.gridUnit * 8
+            height: overlayDrawer.popupHeight
+            x: overlayDrawer.x + overlayDrawer.width + Kirigami.Units.smallSpacing
+            y: overlayDrawer.y
+            opacity: overlayDrawer.opacity
+            radius: Kirigami.Units.cornerRadius
+            color: Kirigami.Theme.backgroundColor
+
+            layer.enabled: true
+            layer.effect: DropShadow {
+                transparentBorder: true
+                horizontalOffset: 0
+                verticalOffset: 2
+                radius: 12
+                samples: 25
+                color: Qt.rgba(0, 0, 0, 0.4)
+            }
+
+            MouseArea {
+                anchors.fill: parent
+            }
+
+            SessionManagement {
+                id: powerSession
+            }
+
+            Column {
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                    margins: Kirigami.Units.smallSpacing
+                }
+                spacing: Kirigami.Units.smallSpacing
+
+                Rectangle {
+                    width: parent.width
+                    height: powerPanel.buttonHeight
+                    radius: Kirigami.Units.cornerRadius
+                    color: lockArea.containsPress
+                        ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+                        : lockArea.containsMouse
+                            ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                            : "transparent"
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: Kirigami.Units.smallSpacing / 2
+                        Kirigami.Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: Kirigami.Units.iconSizes.smallMedium
+                            height: Kirigami.Units.iconSizes.smallMedium
+                            source: "system-lock-screen"
+                            active: lockArea.containsMouse
+                        }
+                        PlasmaComponents.Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            font: Kirigami.Theme.smallFont
+                            text: i18n("Lock Screen")
+                        }
+                    }
+
+                    MouseArea {
+                        id: lockArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            powerSession.lock()
+                            folio.HomeScreenState.closeAppDrawer()
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: powerPanel.buttonHeight
+                    radius: Kirigami.Units.cornerRadius
+                    color: rebootArea.containsPress
+                        ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+                        : rebootArea.containsMouse
+                            ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                            : "transparent"
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: Kirigami.Units.smallSpacing / 2
+                        Kirigami.Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: Kirigami.Units.iconSizes.smallMedium
+                            height: Kirigami.Units.iconSizes.smallMedium
+                            source: "system-reboot"
+                            active: rebootArea.containsMouse
+                        }
+                        PlasmaComponents.Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            font: Kirigami.Theme.smallFont
+                            text: i18n("Restart")
+                        }
+                    }
+
+                    MouseArea {
+                        id: rebootArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            folio.HomeScreenState.closeAppDrawer()
+                            powerSession.requestReboot()
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: powerPanel.buttonHeight
+                    radius: Kirigami.Units.cornerRadius
+                    color: shutdownArea.containsPress
+                        ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+                        : shutdownArea.containsMouse
+                            ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                            : "transparent"
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: Kirigami.Units.smallSpacing / 2
+                        Kirigami.Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: Kirigami.Units.iconSizes.smallMedium
+                            height: Kirigami.Units.iconSizes.smallMedium
+                            source: "system-shutdown"
+                            active: shutdownArea.containsMouse
+                        }
+                        PlasmaComponents.Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            font: Kirigami.Theme.smallFont
+                            text: i18n("Shut Down")
+                        }
+                    }
+
+                    MouseArea {
+                        id: shutdownArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            folio.HomeScreenState.closeAppDrawer()
+                            powerSession.requestShutdown()
+                        }
+                    }
                 }
             }
         }
