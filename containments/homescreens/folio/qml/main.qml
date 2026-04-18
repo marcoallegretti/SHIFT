@@ -400,10 +400,56 @@ ContainmentItem {
                 id: powerSession
             }
 
-            // Power buttons stacked at top — icon only, tooltip on hover
+            // Close button anchored to top — smaller than power icons
+            Rectangle {
+                id: closeButton
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Kirigami.Units.smallSpacing
+                height: Kirigami.Units.iconSizes.smallMedium + 2 * Kirigami.Units.smallSpacing
+                radius: Kirigami.Units.cornerRadius
+                color: closeArea.containsPress
+                    ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+                    : closeArea.containsMouse
+                        ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                        : "transparent"
+                Kirigami.Icon {
+                    anchors.centerIn: parent
+                    width: Kirigami.Units.iconSizes.smallMedium
+                    height: width
+                    source: "window-close-symbolic"
+                    active: closeArea.containsMouse
+                }
+                PlasmaComponents.ToolTip {
+                    text: i18n("Close")
+                    visible: closeArea.containsMouse
+                }
+                MouseArea {
+                    id: closeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: folio.HomeScreenState.closeAppDrawer()
+                }
+            }
+
+            // Separator below close button
+            Rectangle {
+                anchors.top: closeButton.bottom
+                anchors.topMargin: Kirigami.Units.smallSpacing
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: Kirigami.Units.smallSpacing
+                anchors.rightMargin: Kirigami.Units.smallSpacing
+                height: 1
+                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
+            }
+
+            // Power buttons centred vertically in the panel
             Column {
                 id: powerColumn
-                anchors.top: parent.top
+                anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: Kirigami.Units.smallSpacing

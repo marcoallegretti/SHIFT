@@ -8,7 +8,6 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 import org.kde.plasma.components 3.0 as PlasmaComponents
-import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 import './delegate'
 
@@ -90,21 +89,6 @@ Item {
             }
         }
 
-        // Close button for convergence mode
-        QQC2.ToolButton {
-            visible: ShellSettings.Settings.convergenceModeEnabled
-            icon.name: "window-close-symbolic"
-            icon.color: "white"
-            Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-            onClicked: folio.HomeScreenState.closeAppDrawer()
 
-            QQC2.ToolTip.text: i18n("Close")
-            QQC2.ToolTip.visible: hovered
-            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-
-            Kirigami.Theme.inherit: false
-            Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
-        }
     }
 }
