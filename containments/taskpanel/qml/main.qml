@@ -158,13 +158,13 @@ ContainmentItem {
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
         // height is set by layer-shell anchoring; provide a fallback.
-        height: root.navigationPanelHeight
+        height: Kirigami.Units.gridUnit * 3
         width: 1 // layer-shell stretches it via AnchorLeft|AnchorRight
 
         LayerShell.Window.scope: "dock-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: root.navigationPanelHeight
+        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 
