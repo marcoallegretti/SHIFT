@@ -11,6 +11,43 @@ Loader {
 
     property var currentWindow
 
+    // Window that needs geometry clamping after un-maximize in convergence
+    // mode.  Set in onMaximizedChanged and consumed by the timer below.
+    property var pendingConstrainWindow: null
+
+    // After a window is un-maximized in convergence mode, the dockSpaceReserver
+    // LayerShell surface needs one Wayland roundtrip to (re)commit its exclusive
+    // zone so that KWin updates MaximizeArea.  We wait 200 ms — well within the
+    // dock slide-in animation — then clamp the window bottom to MaximizeArea so
+    // it cannot overlap the dock.
+    Timer {
+        id: constrainAfterRestoreTimer
+        interval: 200
+        onTriggered: {
+            const window = root.pendingConstrainWindow
+            root.pendingConstrainWindow = null
+            if (!window || window.deleted || !window.normalWindow) return
+            if (!ShellSettings.Settings.convergenceModeEnabled) return
+
+            const output = window.output
+            const desktop = window.desktops[0]
+            if (!desktop) return
+
+            const maxRect = KWinComponents.Workspace.clientArea(
+                KWinComponents.Workspace.MaximizeArea, output, desktop)
+            const geo = window.frameGeometry
+            const maxBottom = maxRect.y + maxRect.height
+
+            if (geo.y + geo.height > maxBottom) {
+                // Clip the bottom edge to MaximizeArea; preserve top position
+                // and width.  Ensure height is at least 100px to avoid
+                // pathological cases where the window starts above maxRect.
+                const newH = Math.max(100, maxBottom - geo.y)
+                window.frameGeometry = Qt.rect(geo.x, geo.y, geo.width, newH)
+            }
+        }
+    }
+
     function run(window) {
         // HACK: don't maximize xwaylandvideobridge
         // see: https://invent.kde.org/plasma/plasma-mobile/-/issues/324
@@ -67,6 +104,14 @@ Loader {
                 root.run(currentWindow);
             });
             root.run(currentWindow);
+            // Schedule a deferred geometry clamp so that the restored window
+            // doesn't overlap the dock after the dockSpaceReserver exclusive
+            // zone is re-committed over a Wayland roundtrip.
+            if (ShellSettings.Settings.convergenceModeEnabled
+                    && ShellSettings.Settings.autoHidePanelsEnabled) {
+                root.pendingConstrainWindow = currentWindow
+                constrainAfterRestoreTimer.restart()
+            }
         }
     }
 
