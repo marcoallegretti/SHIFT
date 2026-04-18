@@ -25,6 +25,9 @@ Item {
     property alias notificationWidget: notificationWidget
     property real contentY: notificationWidget.listView.contentY
 
+    // The sibling toolbar whose height must be subtracted from the available space.
+    property Item toolButtonsItem: null
+
     property real topPadding: {
         if (actionDrawer.mode == MobileShell.ActionDrawer.Portrait)
             return Kirigami.Units.largeSpacing;
@@ -42,7 +45,8 @@ Item {
     property real maximumHeight: -1
 
     height: {
-        let h = Math.min(actionDrawer.height - toolButtons.height, notificationWidget.listView.contentHeight + 10 + topMargin);
+        let toolH = toolButtonsItem ? toolButtonsItem.height : 0;
+        let h = Math.min(actionDrawer.height - toolH, notificationWidget.listView.contentHeight + Kirigami.Units.largeSpacing + topMargin);
         return maximumHeight > 0 ? Math.min(h, maximumHeight) : h;
     }
 

@@ -186,6 +186,7 @@ Item {
 
         // In convergence, cap the height so it doesn't stretch full-screen
         maximumHeight: isConvergence ? root.height * 0.6 : -1
+        toolButtonsItem: toolButtons
     }
 
     // Secondary swipe area for uses in portrait.

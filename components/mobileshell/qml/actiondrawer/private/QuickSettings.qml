@@ -241,10 +241,22 @@ Item {
                 asynchronous: true
 
                 sourceComponent: PageIndicator {
+                    id: pageIndicatorItem
                     count: swipeView.count
                     currentIndex: swipeView.currentIndex
                     interactive: true
-                    onCurrentIndexChanged: swipeView.currentIndex = currentIndex
+                    onCurrentIndexChanged: {
+                        if (swipeView.currentIndex !== currentIndex)
+                            swipeView.currentIndex = currentIndex;
+                    }
+
+                    Connections {
+                        target: swipeView
+                        function onCurrentIndexChanged() {
+                            if (pageIndicatorItem.currentIndex !== swipeView.currentIndex)
+                                pageIndicatorItem.currentIndex = swipeView.currentIndex;
+                        }
+                    }
 
                     delegate: Rectangle {
                         implicitWidth: 8
