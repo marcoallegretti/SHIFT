@@ -19,6 +19,9 @@ import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 import org.kde.layershell 1.0 as LayerShell
 import org.kde.plasma.private.sessions 2.0
+import org.kde.coreaddons as KCoreAddons
+import org.kde.kcmutils as KCM
+import org.kde.kirigamiaddons.components as KirigamiAddonsComponents
 
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
@@ -349,19 +352,17 @@ ContainmentItem {
             }
         }
 
+        // Drop shadow rendered separately so powerPanel itself needs no layer FBO,
+        // which would rasterize and blur the icons inside.
         Rectangle {
-            id: powerPanel
-
-            readonly property real buttonHeight: Kirigami.Units.gridUnit * 5
-
-            width: Kirigami.Units.gridUnit * 8
-            height: overlayDrawer.popupHeight
-            x: overlayDrawer.x + overlayDrawer.width + Kirigami.Units.smallSpacing
-            y: overlayDrawer.y
-            opacity: overlayDrawer.opacity
-            radius: Kirigami.Units.cornerRadius
-            color: Kirigami.Theme.backgroundColor
-
+            id: powerPanelShadow
+            width: powerPanel.width
+            height: powerPanel.height
+            x: powerPanel.x
+            y: powerPanel.y
+            radius: powerPanel.radius
+            color: powerPanel.color
+            opacity: powerPanel.opacity
             layer.enabled: true
             layer.effect: DropShadow {
                 transparentBorder: true
@@ -371,51 +372,63 @@ ContainmentItem {
                 samples: 25
                 color: Qt.rgba(0, 0, 0, 0.4)
             }
+        }
+
+        Rectangle {
+            id: powerPanel
+
+            // Width: just enough for one icon button + side margins
+            readonly property real tileSize: Kirigami.Units.iconSizes.medium + 2 * Kirigami.Units.largeSpacing
+
+            width: tileSize
+            height: overlayDrawer.popupHeight
+            x: overlayDrawer.x + overlayDrawer.width + Kirigami.Units.smallSpacing
+            y: overlayDrawer.y
+            opacity: overlayDrawer.opacity
+            radius: Kirigami.Units.cornerRadius
+            color: Kirigami.Theme.backgroundColor
 
             MouseArea {
                 anchors.fill: parent
+            }
+
+            KCoreAddons.KUser {
+                id: kuser
             }
 
             SessionManagement {
                 id: powerSession
             }
 
+            // Power buttons stacked at top — icon only, tooltip on hover
             Column {
-                anchors {
-                    top: parent.top
-                    left: parent.left
-                    right: parent.right
-                    margins: Kirigami.Units.smallSpacing
-                }
+                id: powerColumn
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Kirigami.Units.smallSpacing
                 spacing: Kirigami.Units.smallSpacing
 
                 Rectangle {
                     width: parent.width
-                    height: powerPanel.buttonHeight
+                    height: width
                     radius: Kirigami.Units.cornerRadius
                     color: lockArea.containsPress
                         ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
                         : lockArea.containsMouse
                             ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
                             : "transparent"
-
-                    Column {
+                    Kirigami.Icon {
                         anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing / 2
-                        Kirigami.Icon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: Kirigami.Units.iconSizes.smallMedium
-                            height: Kirigami.Units.iconSizes.smallMedium
-                            source: "system-lock-screen"
-                            active: lockArea.containsMouse
-                        }
-                        PlasmaComponents.Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            font: Kirigami.Theme.smallFont
-                            text: i18n("Lock Screen")
-                        }
+                        width: Kirigami.Units.iconSizes.medium
+                        height: width
+                        source: "system-lock-screen"
+                        active: lockArea.containsMouse
                     }
-
+                    PlasmaComponents.ToolTip {
+                        text: i18n("Lock Screen")
+                        visible: lockArea.containsMouse
+                    }
                     MouseArea {
                         id: lockArea
                         anchors.fill: parent
@@ -430,31 +443,24 @@ ContainmentItem {
 
                 Rectangle {
                     width: parent.width
-                    height: powerPanel.buttonHeight
+                    height: width
                     radius: Kirigami.Units.cornerRadius
                     color: rebootArea.containsPress
                         ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
                         : rebootArea.containsMouse
                             ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
                             : "transparent"
-
-                    Column {
+                    Kirigami.Icon {
                         anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing / 2
-                        Kirigami.Icon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: Kirigami.Units.iconSizes.smallMedium
-                            height: Kirigami.Units.iconSizes.smallMedium
-                            source: "system-reboot"
-                            active: rebootArea.containsMouse
-                        }
-                        PlasmaComponents.Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            font: Kirigami.Theme.smallFont
-                            text: i18n("Restart")
-                        }
+                        width: Kirigami.Units.iconSizes.medium
+                        height: width
+                        source: "system-reboot"
+                        active: rebootArea.containsMouse
                     }
-
+                    PlasmaComponents.ToolTip {
+                        text: i18n("Restart")
+                        visible: rebootArea.containsMouse
+                    }
                     MouseArea {
                         id: rebootArea
                         anchors.fill: parent
@@ -469,31 +475,24 @@ ContainmentItem {
 
                 Rectangle {
                     width: parent.width
-                    height: powerPanel.buttonHeight
+                    height: width
                     radius: Kirigami.Units.cornerRadius
                     color: shutdownArea.containsPress
                         ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
                         : shutdownArea.containsMouse
                             ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
                             : "transparent"
-
-                    Column {
+                    Kirigami.Icon {
                         anchors.centerIn: parent
-                        spacing: Kirigami.Units.smallSpacing / 2
-                        Kirigami.Icon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: Kirigami.Units.iconSizes.smallMedium
-                            height: Kirigami.Units.iconSizes.smallMedium
-                            source: "system-shutdown"
-                            active: shutdownArea.containsMouse
-                        }
-                        PlasmaComponents.Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            font: Kirigami.Theme.smallFont
-                            text: i18n("Shut Down")
-                        }
+                        width: Kirigami.Units.iconSizes.medium
+                        height: width
+                        source: "system-shutdown"
+                        active: shutdownArea.containsMouse
                     }
-
+                    PlasmaComponents.ToolTip {
+                        text: i18n("Shut Down")
+                        visible: shutdownArea.containsMouse
+                    }
                     MouseArea {
                         id: shutdownArea
                         anchors.fill: parent
@@ -503,6 +502,56 @@ ContainmentItem {
                             folio.HomeScreenState.closeAppDrawer()
                             powerSession.requestShutdown()
                         }
+                    }
+                }
+            }
+
+            // Separator above user avatar
+            Rectangle {
+                anchors.bottom: userSection.top
+                anchors.bottomMargin: Kirigami.Units.smallSpacing
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: Kirigami.Units.smallSpacing
+                anchors.rightMargin: Kirigami.Units.smallSpacing
+                height: 1
+                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
+            }
+
+            // User avatar anchored to bottom — tooltip shows name, click opens user settings
+            Rectangle {
+                id: userSection
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Kirigami.Units.smallSpacing
+                height: width
+                radius: Kirigami.Units.cornerRadius
+                color: userArea.containsPress
+                    ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
+                    : userArea.containsMouse
+                        ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                        : "transparent"
+
+                KirigamiAddonsComponents.Avatar {
+                    anchors.centerIn: parent
+                    width: Kirigami.Units.iconSizes.medium
+                    height: width
+                    source: kuser.faceIconUrl
+                    name: kuser.fullName || kuser.loginName
+                }
+                PlasmaComponents.ToolTip {
+                    text: kuser.fullName || kuser.loginName
+                    visible: userArea.containsMouse
+                }
+                MouseArea {
+                    id: userArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        KCM.KCMLauncher.openSystemSettings("kcm_users")
+                        folio.HomeScreenState.closeAppDrawer()
                     }
                 }
             }
