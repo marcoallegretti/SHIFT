@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: 2025 Florian RICHER <florian.richer@protonmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+if(NOT TARGET KF6::AuthCore)
+    find_package(KF6Auth NO_MODULE REQUIRED)
+endif()
+
 add_executable(waydroidhelper)
 target_sources(waydroidhelper PRIVATE waydroidhelper.cpp)
 
@@ -11,10 +15,6 @@ target_link_libraries(waydroidhelper
 )
 
 install(TARGETS waydroidhelper DESTINATION ${KAUTH_HELPER_INSTALL_DIR})
-
-if(NOT TARGET KF6::AuthCore)
-    find_package(KF6Auth NO_MODULE REQUIRED)
-endif()
 
 kauth_install_helper_files(waydroidhelper org.kde.plasma.mobileshell.waydroidhelper root)
 kauth_install_actions(org.kde.plasma.mobileshell.waydroidhelper waydroidhelper.actions)

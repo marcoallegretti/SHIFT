@@ -4,6 +4,10 @@
 add_executable(flashlighthelper)
 target_sources(flashlighthelper PRIVATE flashlighthelper.cpp)
 
+if(NOT TARGET KF6::AuthCore)
+    find_package(KF6Auth NO_MODULE REQUIRED)
+endif()
+
 target_link_libraries(flashlighthelper
     Qt6::Core
     KF6::AuthCore
@@ -12,10 +16,6 @@ target_link_libraries(flashlighthelper
 )
 
 install(TARGETS flashlighthelper DESTINATION ${KAUTH_HELPER_INSTALL_DIR})
-
-if(NOT TARGET KF6::AuthCore)
-    find_package(KF6Auth NO_MODULE REQUIRED)
-endif()
 
 kauth_install_helper_files(flashlighthelper org.kde.plasma.mobileshell.flashlighthelper root)
 kauth_install_actions(org.kde.plasma.mobileshell.flashlighthelper flashlighthelper.actions)
