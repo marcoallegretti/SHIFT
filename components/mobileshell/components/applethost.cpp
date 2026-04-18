@@ -91,7 +91,18 @@ QQuickItem *AppletHost::fullRepresentationFor(const QString &pluginId)
 
     item->setPreloadFullRepresentation(true);
 
-    return item->fullRepresentationItem();
+    auto *fullRepItem = item->fullRepresentationItem();
+    if (!fullRepItem) {
+        connect(
+            item,
+            &PlasmaQuick::AppletQuickItem::fullRepresentationItemChanged,
+            this,
+            [this, pluginId]() {
+                Q_EMIT appletReady(pluginId);
+            },
+            static_cast<Qt::ConnectionType>(Qt::AutoConnection | Qt::SingleShotConnection));
+    }
+    return fullRepItem;
 }
 
 #include "applethost.moc"

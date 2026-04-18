@@ -50,6 +50,9 @@ Item {
 
             var operationName = mouse.button === Qt.RightButton ? "ContextMenu" : "Activate";
             var operation = model.service.operationDescription(operationName);
+            if (!operation) {
+                return;
+            }
             operation.x = taskIcon.mapToGlobal(0, 0).x;
             operation.y = taskIcon.mapToGlobal(0, taskIcon.height).y;
             model.service.startOperationCall(operation);

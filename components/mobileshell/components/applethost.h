@@ -32,6 +32,9 @@ public:
 
     Q_INVOKABLE QQuickItem *fullRepresentationFor(const QString &pluginId);
 
+Q_SIGNALS:
+    void appletReady(const QString &pluginId);
+
 private:
     void ensureCorona();
 
