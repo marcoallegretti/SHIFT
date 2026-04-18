@@ -9,6 +9,8 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QSet>
+#include <QSortFilterProxyModel>
+#include <QStringList>
 
 #include <KService>
 
@@ -31,6 +33,7 @@ public:
     enum Roles {
         DelegateRole = Qt::UserRole + 1,
         NameRole,
+        CategoriesRole,
     };
 
     ApplicationListModel(HomeScreen *parent = nullptr);
@@ -41,6 +44,8 @@ public:
     QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
 
     void load();
+
+    Q_INVOKABLE QStringList allCategories() const;
 
 Q_SIGNALS:
     // Emitted when an application was detected to have been removed from the system
@@ -64,6 +69,21 @@ class ApplicationListSearchModel : public QSortFilterProxyModel
     QML_ELEMENT
     QML_UNCREATABLE("")
 
+    Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
+
 public:
     ApplicationListSearchModel(HomeScreen *parent = nullptr, ApplicationListModel *model = nullptr);
+
+    QString categoryFilter() const;
+    void setCategoryFilter(const QString &filter);
+
+Q_SIGNALS:
+    void categoryFilterChanged();
+
+protected:
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+
+private:
+    HomeScreen *m_homeScreen{nullptr};
+    QString m_categoryFilter;
 };

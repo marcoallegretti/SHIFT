@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QQuickItem>
 #include <QString>
+#include <QStringList>
 
 #include <KIO/ApplicationLauncherJob>
 #include <KService>
@@ -33,6 +34,7 @@ class FolioApplication : public QObject, public std::enable_shared_from_this<Fol
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
     Q_PROPERTY(QString icon READ icon NOTIFY iconChanged)
     Q_PROPERTY(QString storageId READ storageId NOTIFY storageIdChanged)
+    Q_PROPERTY(QStringList categories READ categories CONSTANT)
 
 public:
     typedef std::shared_ptr<FolioApplication> Ptr;
@@ -46,6 +48,7 @@ public:
     QString name() const;
     QString icon() const;
     QString storageId() const;
+    QStringList categories() const;
     KWayland::Client::PlasmaWindow *window() const;
 
     void setName(QString &name);
@@ -67,5 +70,6 @@ private:
     QString m_name;
     QString m_icon;
     QString m_storageId;
+    QStringList m_categories;
     KWayland::Client::PlasmaWindow *m_window{nullptr};
 };

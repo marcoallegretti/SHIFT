@@ -15,6 +15,7 @@ FolioApplication::FolioApplication(KService::Ptr service, QObject *parent)
     , m_name{service->name()}
     , m_icon{service->icon()}
     , m_storageId{service->storageId()}
+    , m_categories{service->categories()}
 {
     if (service->property<bool>(QStringLiteral("X-KDE-PlasmaMobile-UseGenericName"))) {
         m_name = service->genericName();
@@ -74,6 +75,11 @@ QString FolioApplication::icon() const
 QString FolioApplication::storageId() const
 {
     return m_storageId;
+}
+
+QStringList FolioApplication::categories() const
+{
+    return m_categories;
 }
 
 KWayland::Client::PlasmaWindow *FolioApplication::window() const

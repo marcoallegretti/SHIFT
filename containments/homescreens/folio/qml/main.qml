@@ -347,8 +347,47 @@ ContainmentItem {
                 target: folio.HomeScreenState
 
                 function onAppDrawerOpened() {
-                    overlayDrawer.forceActiveFocus();
+                    folio.ApplicationListSearchModel.categoryFilter = ""
+                    overlayDrawer.forceActiveFocus()
                 }
+            }
+        }
+
+        // Drop shadow rendered separately so categoryPanel itself needs no
+        // layer FBO (which would rasterize and blur the icons inside).
+        Rectangle {
+            id: categoryPanelShadow
+            width: categoryPanel.width
+            height: categoryPanel.height
+            x: categoryPanel.x
+            y: categoryPanel.y
+            radius: categoryPanel.radius
+            color: categoryPanel.color
+            opacity: categoryPanel.opacity
+            layer.enabled: true
+            layer.effect: DropShadow {
+                transparentBorder: true
+                horizontalOffset: 0
+                verticalOffset: 2
+                radius: 12
+                samples: 25
+                color: Qt.rgba(0, 0, 0, 0.4)
+            }
+        }
+
+        CategoryPanel {
+            id: categoryPanel
+            folio: root.folio
+
+            width: Kirigami.Units.gridUnit * 9
+            height: overlayDrawer.popupHeight
+            x: overlayDrawer.x + overlayDrawer.width + Kirigami.Units.smallSpacing
+            y: overlayDrawer.y
+            opacity: overlayDrawer.opacity
+
+            onCategorySelected: (catId) => {
+                folio.ApplicationListSearchModel.categoryFilter = catId
+                overlayDrawerHeader.clearSearchText()
             }
         }
 
@@ -382,7 +421,7 @@ ContainmentItem {
 
             width: tileSize
             height: overlayDrawer.popupHeight
-            x: overlayDrawer.x + overlayDrawer.width + Kirigami.Units.smallSpacing
+            x: categoryPanel.x + categoryPanel.width + Kirigami.Units.smallSpacing
             y: overlayDrawer.y
             opacity: overlayDrawer.opacity
             radius: Kirigami.Units.cornerRadius

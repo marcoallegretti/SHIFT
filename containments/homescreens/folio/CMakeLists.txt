@@ -8,6 +8,7 @@ plasma_add_applet(org.kde.plasma.mobile.homescreen.folio
         qml/AppDrawer.qml
         qml/AppDrawerGrid.qml
         qml/AppDrawerHeader.qml
+        qml/CategoryPanel.qml
         qml/DelegateDragItem.qml
         qml/DelegateDropArea.qml
         qml/FavouritesBar.qml

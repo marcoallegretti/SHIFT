@@ -46,7 +46,11 @@ ApplicationListModel::~ApplicationListModel() = default;
 
 QHash<int, QByteArray> ApplicationListModel::roleNames() const
 {
-    return {{DelegateRole, QByteArrayLiteral("delegate")}};
+    return {
+        {DelegateRole, QByteArrayLiteral("delegate")},
+        {NameRole, QByteArrayLiteral("name")},
+        {CategoriesRole, QByteArrayLiteral("categories")},
+    };
 }
 
 void ApplicationListModel::sycocaDbChanged()
@@ -157,6 +161,11 @@ QVariant ApplicationListModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
         return delegate->application()->name();
+    case CategoriesRole:
+        if (!delegate->application()) {
+            return QVariant();
+        }
+        return QVariant::fromValue(delegate->application()->categories());
     default:
         return QVariant();
     }
@@ -171,8 +180,54 @@ int ApplicationListModel::rowCount(const QModelIndex &parent) const
     return m_delegates.count();
 }
 
+// Sub-categories merged into their canonical parent, mirroring Kickoff's grouping.
+static QString normalizeCategory(const QString &cat)
+{
+    if (cat == QLatin1String("Audio") || cat == QLatin1String("Video"))
+        return QStringLiteral("AudioVideo");
+    if (cat == QLatin1String("Settings"))
+        return QStringLiteral("System");
+    return cat;
+}
+
+static const QSet<QString> &mainCategories()
+{
+    static const QSet<QString> s = {
+        QStringLiteral("AudioVideo"),
+        QStringLiteral("Development"),
+        QStringLiteral("Education"),
+        QStringLiteral("Game"),
+        QStringLiteral("Graphics"),
+        QStringLiteral("Network"),
+        QStringLiteral("Office"),
+        QStringLiteral("Science"),
+        QStringLiteral("System"),
+        QStringLiteral("Utility"),
+    };
+    return s;
+}
+
+QStringList ApplicationListModel::allCategories() const
+{
+    QSet<QString> found;
+    for (const auto &del : m_delegates) {
+        if (!del->application())
+            continue;
+        for (const QString &raw : del->application()->categories()) {
+            const QString cat = normalizeCategory(raw);
+            if (mainCategories().contains(cat))
+                found.insert(cat);
+        }
+    }
+
+    QStringList result = found.values();
+    result.sort();
+    return result;
+}
+
 ApplicationListSearchModel::ApplicationListSearchModel(HomeScreen *parent, ApplicationListModel *model)
     : QSortFilterProxyModel(parent)
+    , m_homeScreen{parent}
 {
     setSourceModel(model);
 
@@ -184,4 +239,45 @@ ApplicationListSearchModel::ApplicationListSearchModel(HomeScreen *parent, Appli
     setSortLocaleAware(true);
 
     sort(0, Qt::AscendingOrder);
+}
+
+QString ApplicationListSearchModel::categoryFilter() const
+{
+    return m_categoryFilter;
+}
+
+void ApplicationListSearchModel::setCategoryFilter(const QString &filter)
+{
+    if (m_categoryFilter == filter)
+        return;
+    m_categoryFilter = filter;
+    Q_EMIT categoryFilterChanged();
+    beginFilterChange();
+    endFilterChange(QSortFilterProxyModel::Direction::Rows);
+}
+
+bool ApplicationListSearchModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
+{
+    if (!QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent))
+        return false;
+
+    if (m_categoryFilter.isEmpty())
+        return true;
+
+    auto *src = static_cast<ApplicationListModel *>(sourceModel());
+    const QModelIndex idx = src->index(sourceRow, 0, sourceParent);
+    auto *del = src->data(idx, ApplicationListModel::DelegateRole).value<FolioDelegate *>();
+    if (!del || !del->application())
+        return false;
+
+    if (m_categoryFilter == QLatin1String("__favorites__"))
+        return m_homeScreen->favouritesModel()->containsApplication(del->application()->storageId());
+
+    // Match both the canonical name and any raw aliases it absorbs.
+    const QStringList &cats = del->application()->categories();
+    for (const QString &raw : cats) {
+        if (normalizeCategory(raw) == m_categoryFilter)
+            return true;
+    }
+    return false;
 }
