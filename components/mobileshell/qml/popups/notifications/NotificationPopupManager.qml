@@ -33,6 +33,9 @@ Window {
     readonly property real openOffset: Kirigami.Units.gridUnit + Kirigami.Units.smallSpacing * 3
     readonly property int longestLength: Math.max(Screen.width, Screen.height)
     readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
+    // Margin between popup and screen edge in convergence mode; used in both
+    // the delegate x position and the input-region calculation so they stay in sync.
+    readonly property real convergencePopupMargin: Kirigami.Units.gridUnit * 2
     property var keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
     LayerShell.Window.scope: "notification"
@@ -100,8 +103,8 @@ Window {
             }
 
             if (isConvergence) {
-                let regionX = notificationPopupManager.width - notificationPopupManager.popupWidth - Kirigami.Units.gridUnit * 4;
-                let regionY = Screen.height - openOffset - popupHeight - Kirigami.Units.gridUnit;
+                let regionX = notificationPopupManager.width - notificationPopupManager.popupWidth - notificationPopupManager.convergencePopupMargin;
+                let regionY = openOffset;
                 ShellUtil.setInputRegion(notificationPopupManager, Qt.rect(regionX, regionY, notificationPopupManager.popupWidth + Kirigami.Units.gridUnit * 2, popupHeight + Kirigami.Units.gridUnit * 2));
             } else {
                 ShellUtil.setInputRegion(notificationPopupManager, Qt.rect((notificationPopupManager.width - notificationPopupManager.popupWidth - Kirigami.Units.gridUnit) / 2, openOffset - Kirigami.Units.gridUnit / 2, notificationPopupManager.popupWidth + Kirigami.Units.gridUnit, popupHeight + Kirigami.Units.gridUnit * ((notifications.count - notifications.currentPopupIndex > 1) ? 4 : 1)));
@@ -203,7 +206,7 @@ Window {
                     id: popup
 
                     x: notificationPopupManager.isConvergence
-                        ? (parent.width - width - Kirigami.Units.gridUnit * 2)
+                        ? (parent.width - width - notificationPopupManager.convergencePopupMargin)
                         : (parent.width - width) / 2
                     z: notifications.count - index
 
