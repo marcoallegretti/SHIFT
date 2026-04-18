@@ -148,7 +148,7 @@ Item {
             orientation: root.isVertical ? ListView.Vertical : ListView.Horizontal
             spacing: Kirigami.Units.smallSpacing
             clip: true
-            interactive: contentWidth > width
+            interactive: root.isVertical ? contentHeight > height : contentWidth > width
             model: root.taskModel
 
             delegate: NavigationPanelButton {
