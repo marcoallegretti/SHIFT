@@ -195,12 +195,19 @@ ContainmentItem {
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
         // Auto-hide: slide dock content off-screen when a window is
-        // maximized.  A HoverHandler brings it back on mouse proximity.
+        // maximized.  The reveal strip at the screen edge brings it back.
         property real dockOffset: 0
         readonly property real dockHeight: Kirigami.Units.gridUnit * 3
-        readonly property bool dockHovered: dockHoverHandler.hovered
+
+        // Height of the input-receive strip kept at the screen edge when
+        // the dock is hidden.  Matches the navigation panel convention.
+        readonly property real revealStripHeight: Kirigami.Units.gridUnit
+
+        // True once the hover-reveal timer fires; cleared on hover-exit.
+        property bool hoverRevealing: false
+
         readonly property bool shouldHide: ShellSettings.Settings.autoHidePanelsEnabled
-                                              && windowMaximizedTracker.showingWindow && !dockHovered
+                                              && windowMaximizedTracker.showingWindow && !hoverRevealing
 
         onShouldHideChanged: {
             if (shouldHide) {
@@ -210,8 +217,38 @@ ContainmentItem {
             }
         }
 
+        // Narrow the input region to a strip at the screen edge when hidden
+        // so that app controls near the bottom edge are not accidentally
+        // intercepted.  Mirrors the same pattern used by NavigationPanel.
+        onDockOffsetChanged: {
+            if (dockOffset >= dockHeight) {
+                MobileShell.ShellUtil.setInputRegion(dockOverlay,
+                    Qt.rect(0, dockOverlay.height - revealStripHeight,
+                            dockOverlay.width, revealStripHeight))
+            } else if (dockOffset === 0) {
+                MobileShell.ShellUtil.setInputRegion(dockOverlay, Qt.rect(0, 0, 0, 0))
+            }
+        }
+
+        // Delay reveal by 300 ms so a quick edge graze does not pop the
+        // dock up mid-interaction with the underlying application.
+        Timer {
+            id: hoverRevealTimer
+            interval: 300
+            repeat: false
+            onTriggered: dockOverlay.hoverRevealing = true
+        }
+
         HoverHandler {
             id: dockHoverHandler
+            onHoveredChanged: {
+                if (hovered) {
+                    hoverRevealTimer.start()
+                } else {
+                    hoverRevealTimer.stop()
+                    dockOverlay.hoverRevealing = false
+                }
+            }
         }
 
         Behavior on dockOffset {
