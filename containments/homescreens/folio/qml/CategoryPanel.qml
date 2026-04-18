@@ -80,6 +80,7 @@ Rectangle {
         target: folio.ApplicationListModel
         function onRowsInserted() { root.populate() }
         function onRowsRemoved()  { root.populate() }
+        function onModelReset()   { root.populate() }
     }
 
     // ---------- tile list ----------

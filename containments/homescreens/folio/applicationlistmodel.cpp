@@ -250,9 +250,9 @@ void ApplicationListSearchModel::setCategoryFilter(const QString &filter)
 {
     if (m_categoryFilter == filter)
         return;
+    beginFilterChange();
     m_categoryFilter = filter;
     Q_EMIT categoryFilterChanged();
-    beginFilterChange();
     endFilterChange(QSortFilterProxyModel::Direction::Rows);
 }
 
@@ -265,13 +265,21 @@ bool ApplicationListSearchModel::filterAcceptsRow(int sourceRow, const QModelInd
         return true;
 
     auto *src = static_cast<ApplicationListModel *>(sourceModel());
+    if (!src)
+        return false;
     const QModelIndex idx = src->index(sourceRow, 0, sourceParent);
     auto *del = src->data(idx, ApplicationListModel::DelegateRole).value<FolioDelegate *>();
     if (!del || !del->application())
         return false;
 
-    if (m_categoryFilter == QLatin1String("__favorites__"))
-        return m_homeScreen->favouritesModel()->containsApplication(del->application()->storageId());
+    if (m_categoryFilter == QLatin1String("__favorites__")) {
+        if (!m_homeScreen)
+            return false;
+        auto *favModel = m_homeScreen->favouritesModel();
+        if (!favModel)
+            return false;
+        return favModel->containsApplication(del->application()->storageId());
+    }
 
     // Match both the canonical name and any raw aliases it absorbs.
     const QStringList &cats = del->application()->categories();
