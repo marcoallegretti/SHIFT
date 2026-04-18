@@ -30,6 +30,11 @@ public:
     explicit AppletHost(QObject *parent = nullptr);
     ~AppletHost() override;
 
+    static QObject *create(QQmlEngine * /*engine*/, QJSEngine * /*scriptEngine*/)
+    {
+        return new AppletHost();
+    }
+
     Q_INVOKABLE QQuickItem *fullRepresentationFor(const QString &pluginId);
 
 Q_SIGNALS:

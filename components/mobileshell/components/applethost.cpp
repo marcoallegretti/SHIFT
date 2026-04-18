@@ -25,6 +25,10 @@ public:
     {
         KPackage::Package pkg = KPackage::PackageLoader::self()->loadPackage(u"Plasma/Shell"_s);
         pkg.setPath(u"org.kde.plasma.mobile"_s);
+        if (!pkg.isValid()) {
+            qWarning() << "AppletHost: failed to load plasma shell package org.kde.plasma.mobile";
+            return;
+        }
         setKPackage(pkg);
     }
 
