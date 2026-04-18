@@ -130,8 +130,8 @@ MouseArea {
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: homeMouseArea.containsPress
-            ? Qt.rgba(255, 255, 255, 0.2)
-            : (homeMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+            ? Qt.rgba(1, 1, 1, 0.2)
+            : (homeMouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
         radius: Kirigami.Units.cornerRadius
 
         Kirigami.Icon {
@@ -160,8 +160,8 @@ MouseArea {
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: overviewMouseArea.containsPress
-            ? Qt.rgba(255, 255, 255, 0.2)
-            : (overviewMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+            ? Qt.rgba(1, 1, 1, 0.2)
+            : (overviewMouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
         radius: Kirigami.Units.cornerRadius
 
         Kirigami.Icon {
@@ -854,8 +854,8 @@ MouseArea {
                 anchors.fill: parent
                 radius: Kirigami.Units.cornerRadius
                 color: taskMouseArea.containsPress
-                    ? Qt.rgba(255, 255, 255, 0.2)
-                    : (taskMouseArea.containsMouse ? Qt.rgba(255, 255, 255, 0.1) : "transparent")
+                    ? Qt.rgba(1.0, 1.0, 1.0, 0.2)
+                    : (taskMouseArea.containsMouse ? Qt.rgba(1.0, 1.0, 1.0, 0.1) : "transparent")
             }
 
             // Task icon

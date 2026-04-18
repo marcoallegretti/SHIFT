@@ -126,7 +126,7 @@ Folio.DelegateTouchArea {
                 Rectangle {
                     anchors.fill: parent
                     radius: Kirigami.Units.cornerRadius
-                    color: Qt.rgba(255, 255, 255, 0.1)
+                    color: Qt.rgba(1.0, 1.0, 1.0, 0.1)
                     visible: ShellSettings.Settings.convergenceModeEnabled && root.hovered
                 }
             }
