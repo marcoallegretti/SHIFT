@@ -101,7 +101,7 @@ MobileShell.BaseItem {
 
     function delegatePressAndHold() {
         // In convergence mode, show inline detail popup if available.
-        if (ShellSettings.Settings.convergenceModeEnabled && root.settingsCommand) {
+        if (ShellSettings.Settings.convergenceModeEnabled && root.settingsCommand && !root.restrictedPermissions) {
             let pluginId = __appletForCommand[root.settingsCommand];
             if (pluginId) {
                 root.detailRequested(pluginId);

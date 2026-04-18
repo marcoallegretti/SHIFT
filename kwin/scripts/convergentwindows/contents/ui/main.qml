@@ -31,6 +31,7 @@ Loader {
 
             const output = window.output
             const desktop = window.desktops[0]
+            if (!output) return
             if (!desktop) return
 
             const maxRect = KWinComponents.Workspace.clientArea(
