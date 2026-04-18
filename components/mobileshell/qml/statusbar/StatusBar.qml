@@ -92,7 +92,7 @@ Item {
             // Hover highlight in convergence mode to indicate the bar is clickable
             Rectangle {
                 anchors.fill: parent
-                color: Qt.rgba(1.0, 1.0, 1.0, 0.1)
+                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
                 visible: ShellSettings.Settings.convergenceModeEnabled && statusBarHover.hovered
             }
 

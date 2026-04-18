@@ -75,20 +75,16 @@ MobileShell.NavigationPanel {
     // ~~~~
     // navigation panel actions
 
-    // toggle task switcher button (KWin Overview in convergence mode, mobile task switcher otherwise)
+    // toggle task switcher button
     leftAction: MobileShell.NavigationPanelAction {
         id: taskSwitcherAction
 
         enabled: true
-        iconSource: ShellSettings.Settings.convergenceModeEnabled ? "view-grid-symbolic" : "mobile-task-switcher"
-        shrinkSize: ShellSettings.Settings.convergenceModeEnabled ? 0 : 4
+        iconSource: "mobile-task-switcher"
+        shrinkSize: 4
 
         onTriggered: {
-            if (ShellSettings.Settings.convergenceModeEnabled) {
-                Plasmoid.triggerOverview();
-            } else {
-                Plasmoid.triggerTaskSwitcher();
-            }
+            Plasmoid.triggerTaskSwitcher();
         }
     }
 
