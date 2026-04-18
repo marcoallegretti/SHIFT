@@ -642,12 +642,12 @@ MouseArea {
         x: {
             if (!targetDelegate) return 0
             var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            return Math.max(0, delegateGlobal.x + (targetDelegate.width - width) / 2)
+            return Math.max(0, Math.min(Screen.width - width, delegateGlobal.x + (targetDelegate.width - width) / 2))
         }
         y: {
             if (!targetDelegate) return 0
             var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            return delegateGlobal.y - height - Kirigami.Units.smallSpacing
+            return Math.max(0, Math.min(Screen.height - height, delegateGlobal.y - height - Kirigami.Units.smallSpacing))
         }
 
         onVisibleChanged: {

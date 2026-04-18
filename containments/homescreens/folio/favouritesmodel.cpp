@@ -4,7 +4,6 @@
 #include "favouritesmodel.h"
 #include "homescreenstate.h"
 
-#include <KService>
 #include <QByteArray>
 #include <QDebug>
 #include <QJsonArray>

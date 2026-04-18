@@ -179,7 +179,26 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        activeFocusOnTab: true
                         onClicked: root.categorySelected(tile.catId)
+
+                        Keys.onPressed: (event) => {
+                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                root.categorySelected(tile.catId);
+                                event.accepted = true;
+                            }
+                        }
+
+                        Accessible.role: Accessible.Button
+                        Accessible.name: tile.catName
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: Kirigami.Theme.highlightColor
+                            border.width: tileArea.activeFocus ? 2 : 0
+                            radius: parent.parent.radius
+                        }
                     }
                 }
             }
