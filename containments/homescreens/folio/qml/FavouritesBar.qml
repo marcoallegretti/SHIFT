@@ -916,7 +916,7 @@ MouseArea {
                 Repeater {
                     model: {
                         var ids = taskDelegate.model.WinIdList
-                        return ids ? ids.length : 1
+                        return Math.max(1, ids ? ids.length : 0)
                     }
 
                     Rectangle {

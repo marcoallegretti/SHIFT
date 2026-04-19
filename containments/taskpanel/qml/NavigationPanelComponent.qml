@@ -37,11 +37,6 @@ MobileShell.NavigationPanel {
     foregroundColorGroup: forcedComplementary ? Kirigami.Theme.Complementary : Kirigami.Theme.Window
     shadow: forcedComplementary
 
-    // Convergence mode: expose running-app task strip
-    convergenceMode: ShellSettings.Settings.convergenceModeEnabled
-    taskModel: tasksModel
-    virtualDesktopInfo: virtualDesktopInfo
-
     MobileShellState.PanelSettingsDBusClient {
         id: panelSettings
         screenName: Screen.name

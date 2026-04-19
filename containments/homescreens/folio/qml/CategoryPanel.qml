@@ -191,6 +191,7 @@ Rectangle {
 
                         Accessible.role: Accessible.Button
                         Accessible.name: tile.catName
+                        Accessible.onPressAction: root.categorySelected(tile.catId)
 
                         Rectangle {
                             anchors.fill: parent
