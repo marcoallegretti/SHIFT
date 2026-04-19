@@ -54,8 +54,7 @@ KAuth::ActionReply Flashlighthelper::setbrightness(const QVariantMap &args)
         return KAuth::ActionReply::HelperErrorReply();
     }
 
-    // The libudev header declares value as const char*, so no cast needed.
-    int ret = udev_device_set_sysattr_value(device, "brightness", brightnessBytes.constData());
+    int ret = udev_device_set_sysattr_value(device, "brightness", brightnessBytes.data());
 
     udev_device_unref(device);
     udev_unref(udev);
