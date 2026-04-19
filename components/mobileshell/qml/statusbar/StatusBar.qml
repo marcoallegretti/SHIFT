@@ -212,7 +212,7 @@ Item {
         }
     }
 
-    // Down-arrow hover hint for convergence mode
+    // Down-arrow hint for convergence mode
     Kirigami.Icon {
         z: 2
         source: 'arrow-down'
@@ -224,7 +224,7 @@ Item {
         anchors.bottomMargin: Kirigami.Units.smallSpacing
 
         visible: ShellSettings.Settings.convergenceModeEnabled
-        opacity: statusBarHover.hovered ? 0.8 : 0
+        opacity: statusBarHover.hovered ? 0.6 : 0.2
 
         Behavior on opacity {
             NumberAnimation { duration: Kirigami.Units.shortDuration }
