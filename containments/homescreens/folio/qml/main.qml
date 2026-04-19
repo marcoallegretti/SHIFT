@@ -25,11 +25,31 @@ import org.kde.kirigamiaddons.components as KirigamiAddonsComponents
 
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
+import "./gaming"
+
 import "./private"
 
 ContainmentItem {
     id: root
     property Folio.HomeScreen folio: root.plasmoid
+
+    // Tracks whether the Game Center grid is visible within gaming mode.
+    // Starts true when gaming mode turns on; set to false by a game launch.
+    property bool gameCenterOpen: false
+    property bool showGameCenterHint: false
+
+    Timer {
+        id: gameCenterHintTimer
+        interval: 2600
+        onTriggered: root.showGameCenterHint = false
+    }
+
+    Connections {
+        target: ShellSettings.Settings
+        function onGamingModeEnabledChanged() {
+            root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
+        }
+    }
 
     Component.onCompleted: {
         folio.FolioSettings.load();
@@ -87,6 +107,12 @@ ContainmentItem {
         // Always close action drawer
         if (MobileShellState.ShellDBusClient.isActionDrawerOpen) {
             MobileShellState.ShellDBusClient.closeActionDrawer();
+        }
+
+        if (ShellSettings.Settings.gamingModeEnabled) {
+            // In gaming mode Home/Menu should reopen the Game Center overlay.
+            root.gameCenterOpen = true;
+            return;
         }
 
         if (ShellSettings.Settings.convergenceModeEnabled) {
@@ -186,7 +212,7 @@ ContainmentItem {
     // task panel containment; this window only provides the visible dock.
     Window {
         id: dockOverlay
-        visible: ShellSettings.Settings.convergenceModeEnabled
+        visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
         color: "transparent"
         width: Screen.width
         height: Kirigami.Units.gridUnit * 3
@@ -286,6 +312,7 @@ ContainmentItem {
     Window {
         id: drawerOverlay
         visible: ShellSettings.Settings.convergenceModeEnabled
+                 && !ShellSettings.Settings.gamingModeEnabled
                  && folio.HomeScreenState.appDrawerOpenProgress > 0
         color: "transparent"
         width: Screen.width
@@ -642,6 +669,68 @@ ContainmentItem {
                     }
                 }
             }
+        }
+    }
+
+    // Game Center overlay — full-screen grid of games shown when gaming mode
+    // is active.  Sits at LayerTop so it covers running application windows
+    // without going above system notifications.
+    GameCenterOverlay {
+        id: gameCenterOverlay
+        folio: root.folio
+        visible: ShellSettings.Settings.gamingModeEnabled && root.gameCenterOpen
+
+        onGameStarted: root.gameCenterOpen = false
+        onDismissRequested: {
+            root.gameCenterOpen = false
+            if (ShellSettings.Settings.gamingDismissHintEnabled) {
+                root.showGameCenterHint = true
+                gameCenterHintTimer.restart()
+            }
+        }
+
+        onVisibleChanged: {
+            if (!visible) {
+                folio.ApplicationListSearchModel.categoryFilter = ""
+            }
+        }
+    }
+
+    // Small persistent button at the top-right corner of the screen that lets
+    // the user return to the Game Center after launching a game.
+    GamingHUD {
+        visible: ShellSettings.Settings.gamingModeEnabled && !root.gameCenterOpen
+        onOpenRequested: root.gameCenterOpen = true
+    }
+
+    Rectangle {
+        id: gameCenterHint
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Kirigami.Units.gridUnit * 2
+        visible: root.showGameCenterHint && ShellSettings.Settings.gamingDismissHintEnabled
+        opacity: visible ? 1 : 0
+        z: 2000
+        radius: Kirigami.Units.cornerRadius
+        color: Qt.rgba(0, 0, 0, 0.65)
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.2)
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
+
+        implicitWidth: hintText.implicitWidth + Kirigami.Units.gridUnit * 2
+        implicitHeight: hintText.implicitHeight + Kirigami.Units.largeSpacing
+
+        PlasmaComponents.Label {
+            id: hintText
+            anchors.centerIn: parent
+            text: i18n("Gaming mode is still on. Use Home or the gamepad icon to reopen Game Center.")
+            color: "white"
+            wrapMode: Text.WordWrap
+            width: Math.min(root.width * 0.8, Kirigami.Units.gridUnit * 30)
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 

@@ -60,6 +60,12 @@ Loader {
             return;
         }
 
+        if (ShellSettings.Settings.gamingModeEnabled) {
+            window.noBorder = true;
+            window.setMaximize(true, true);
+            return;
+        }
+
         if (ShellSettings.Settings.convergenceModeEnabled) {
             window.noBorder = false;
         } else {
@@ -120,6 +126,16 @@ Loader {
         target: ShellSettings.Settings
 
         function onConvergenceModeEnabledChanged() {
+            const windows = KWinComponents.Workspace.windows;
+
+            for (let i = 0; i < windows.length; i++) {
+                if (windows[i].normalWindow) {
+                    root.run(windows[i]);
+                }
+            }
+        }
+
+        function onGamingModeEnabledChanged() {
             const windows = KWinComponents.Workspace.windows;
 
             for (let i = 0; i < windows.length; i++) {

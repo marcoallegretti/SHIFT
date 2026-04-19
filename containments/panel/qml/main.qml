@@ -34,11 +34,17 @@ ContainmentItem {
     // Whether the startup feedback is showing
     readonly property bool showingStartupFeedback: MobileShellState.ShellDBusObject.startupFeedbackModel.activeWindowIsStartupFeedback
 
+    readonly property bool gamingMode: ShellSettings.Settings.gamingModeEnabled
+
     // Whether an app is maximized and showing (does not include startup feedback)
     readonly property bool showingApp: windowMaximizedTracker.showingWindow && !showingStartupFeedback
 
     // Whether the currently showing app is in "fullscreen"
     readonly property bool fullscreen: {
+        if (gamingMode) {
+            return true;
+        }
+
         // In convergence mode the status bar is always visible, like a desktop panel.
         if (ShellSettings.Settings.convergenceModeEnabled) {
             return false;
@@ -69,7 +75,7 @@ ContainmentItem {
         }
     }
 
-    readonly property real panelHeight: MobileShell.Constants.topPanelHeight
+    readonly property real panelHeight: gamingMode ? 0 : MobileShell.Constants.topPanelHeight
     onPanelHeightChanged: setWindowProperties()
 
     function setWindowProperties() {
@@ -123,6 +129,11 @@ ContainmentItem {
         function onConvergenceModeEnabledChanged() {
             root.setWindowProperties();
         }
+
+        function onGamingModeEnabledChanged() {
+            root.setWindowProperties();
+            MobileShellState.ShellDBusClient.panelState = ShellSettings.Settings.gamingModeEnabled ? "hidden" : "default";
+        }
     }
 
     Component.onCompleted: {
@@ -136,7 +147,7 @@ ContainmentItem {
     // MaximizeArea by the panel height.
     Window {
         id: topBarSpaceReserver
-        visible: ShellSettings.Settings.convergenceModeEnabled
+        visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
         height: root.panelHeight
@@ -152,6 +163,7 @@ ContainmentItem {
     // Visual panel component
     StatusPanel {
         id: statusPanel
+        visible: !ShellSettings.Settings.gamingModeEnabled
         anchors.fill: parent
         containmentItem: root
     }
