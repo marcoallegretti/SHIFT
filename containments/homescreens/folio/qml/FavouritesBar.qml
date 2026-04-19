@@ -599,7 +599,7 @@ MouseArea {
         id: thumbnailShowTimer
         interval: Kirigami.Units.toolTipDelay
         onTriggered: {
-            thumbnailPopup.visible = true
+            thumbnailPopup.showing = true
         }
     }
 
@@ -607,7 +607,7 @@ MouseArea {
         id: thumbnailHideTimer
         interval: 300
         onTriggered: {
-            thumbnailPopup.visible = false
+            thumbnailPopup.showing = false
             root.hoveredTaskIndex = -1
         }
     }
@@ -620,10 +620,21 @@ MouseArea {
         property var windowIds: []
         property bool isGroup: false
         property bool popupHovered: false
+        property bool showing: false
 
-        function open() { visible = true }
-        function close() { visible = false }
-        readonly property bool opened: visible
+        function open() { showing = true }
+        function close() { showing = false }
+        readonly property bool opened: showing
+
+        visible: showing || fadeAnim.running
+        opacity: showing ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation {
+                id: fadeAnim
+                duration: Kirigami.Units.shortDuration
+                easing.type: Easing.InOutQuad
+            }
+        }
 
         flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
         color: "transparent"
@@ -650,12 +661,24 @@ MouseArea {
             return Math.max(0, Math.min(Screen.height - height, delegateGlobal.y - height - Kirigami.Units.smallSpacing))
         }
 
-        onVisibleChanged: {
-            if (!visible) {
+        onShowingChanged: {
+            if (!showing && !fadeAnim.running) {
                 windowIds = []
                 targetDelegate = null
                 taskIndex = -1
                 isGroup = false
+            }
+        }
+
+        Connections {
+            target: fadeAnim
+            function onRunningChanged() {
+                if (!fadeAnim.running && !thumbnailPopup.showing) {
+                    thumbnailPopup.windowIds = []
+                    thumbnailPopup.targetDelegate = null
+                    thumbnailPopup.taskIndex = -1
+                    thumbnailPopup.isGroup = false
+                }
             }
         }
 
