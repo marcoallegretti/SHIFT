@@ -125,6 +125,7 @@ MouseArea {
     Rectangle {
         id: homeButton
         visible: root.convergenceMode
+        activeFocusOnTab: root.convergenceMode
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
@@ -133,6 +134,26 @@ MouseArea {
             ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
             : (homeMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
         radius: Kirigami.Units.cornerRadius
+
+        Accessible.role: Accessible.Button
+        Accessible.name: i18n("Home")
+        Accessible.onPressAction: MobileShellState.ShellDBusClient.openHomeScreen()
+
+        Keys.onReturnPressed: MobileShellState.ShellDBusClient.openHomeScreen()
+        Keys.onEnterPressed: MobileShellState.ShellDBusClient.openHomeScreen()
+        Keys.onSpacePressed: MobileShellState.ShellDBusClient.openHomeScreen()
+        Keys.onRightPressed: {
+            let first = repeater.itemAt(0)
+            if (first) { first.keyboardFocus(); return }
+            let firstTask = taskRepeater.itemAt(0)
+            if (firstTask) { firstTask.forceActiveFocus(); return }
+            overviewButton.forceActiveFocus()
+        }
+
+        KeyboardHighlight {
+            anchors.fill: parent
+            visible: homeButton.activeFocus
+        }
 
         Kirigami.Icon {
             anchors.centerIn: parent
@@ -155,6 +176,7 @@ MouseArea {
     Rectangle {
         id: overviewButton
         visible: root.convergenceMode
+        activeFocusOnTab: root.convergenceMode
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
@@ -163,6 +185,26 @@ MouseArea {
             ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
             : (overviewMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
         radius: Kirigami.Units.cornerRadius
+
+        Accessible.role: Accessible.Button
+        Accessible.name: i18n("Overview")
+        Accessible.onPressAction: root.folio.triggerOverview()
+
+        Keys.onReturnPressed: root.folio.triggerOverview()
+        Keys.onEnterPressed: root.folio.triggerOverview()
+        Keys.onSpacePressed: root.folio.triggerOverview()
+        Keys.onLeftPressed: {
+            let lastTask = taskRepeater.itemAt(taskRepeater.count - 1)
+            if (lastTask) { lastTask.forceActiveFocus(); return }
+            let lastFav = repeater.itemAt(repeater.count - 1)
+            if (lastFav) { lastFav.keyboardFocus(); return }
+            homeButton.forceActiveFocus()
+        }
+
+        KeyboardHighlight {
+            anchors.fill: parent
+            visible: overviewButton.activeFocus
+        }
 
         Kirigami.Icon {
             anchors.centerIn: parent
@@ -320,9 +362,12 @@ MouseArea {
                     break;
                 case Qt.Key_Left:
                     if (isLocationBottom) {
-                        let nextDelegate = repeater.itemAt(delegate.index - 1);
-                        if (nextDelegate) {
-                            nextDelegate.keyboardFocus();
+                        let prevDelegate = repeater.itemAt(delegate.index - 1);
+                        if (prevDelegate) {
+                            prevDelegate.keyboardFocus();
+                            event.accepted = true;
+                        } else if (root.convergenceMode) {
+                            homeButton.forceActiveFocus();
                             event.accepted = true;
                         }
                     }
@@ -332,6 +377,14 @@ MouseArea {
                         let nextDelegate = repeater.itemAt(delegate.index + 1);
                         if (nextDelegate) {
                             nextDelegate.keyboardFocus();
+                            event.accepted = true;
+                        } else if (root.convergenceMode) {
+                            let firstTask = taskRepeater.itemAt(0);
+                            if (firstTask) {
+                                firstTask.forceActiveFocus();
+                            } else {
+                                overviewButton.forceActiveFocus();
+                            }
                             event.accepted = true;
                         }
                     }
@@ -852,8 +905,48 @@ MouseArea {
             required property int index
             required property var model
 
+            activeFocusOnTab: root.convergenceMode
+
             readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
             readonly property string taskStorageId: root.runningTaskStorageId(taskDelegate.model)
+
+            Accessible.role: Accessible.Button
+            Accessible.name: taskDelegate.model.display || ""
+            Accessible.onPressAction: taskDelegate.activateTask()
+
+            function activateTask() {
+                var winIds = taskDelegate.model.WinIdList
+                if (winIds && winIds.length > 1) {
+                    if (thumbnailPopup.opened && thumbnailPopup.taskIndex === taskDelegate.index) {
+                        thumbnailPopup.close()
+                    } else {
+                        thumbnailPopup.targetDelegate = taskDelegate
+                        thumbnailPopup.taskIndex = taskDelegate.index
+                        thumbnailPopup.windowIds = winIds
+                        thumbnailPopup.isGroup = taskDelegate.model.IsGroupParent === true
+                        thumbnailPopup.open()
+                    }
+                } else {
+                    thumbnailPopup.close()
+                    tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+            }
+
+            Keys.onReturnPressed: taskDelegate.activateTask()
+            Keys.onEnterPressed: taskDelegate.activateTask()
+            Keys.onSpacePressed: taskDelegate.activateTask()
+            Keys.onLeftPressed: {
+                let prev = taskRepeater.itemAt(taskDelegate.index - 1)
+                if (prev) { prev.forceActiveFocus(); return }
+                let lastFav = repeater.itemAt(repeater.count - 1)
+                if (lastFav) { lastFav.keyboardFocus(); return }
+                homeButton.forceActiveFocus()
+            }
+            Keys.onRightPressed: {
+                let next = taskRepeater.itemAt(taskDelegate.index + 1)
+                if (next) { next.forceActiveFocus(); return }
+                overviewButton.forceActiveFocus()
+            }
 
             // Position after all favourites
             property double fromCenterValue: (repeater.count + taskDelegate.index) - (root.totalItemCount / 2)
@@ -879,6 +972,11 @@ MouseArea {
                 color: taskMouseArea.containsPress
                     ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
                     : (taskMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
+            }
+
+            KeyboardHighlight {
+                anchors.fill: parent
+                visible: taskDelegate.activeFocus
             }
 
             // Task icon
@@ -970,22 +1068,7 @@ MouseArea {
                         thumbnailShowTimer.stop()
                         taskContextMenu.open();
                     } else {
-                        var winIds = taskDelegate.model.WinIdList
-                        if (winIds && winIds.length > 1) {
-                            // Multiple windows: toggle thumbnail popup
-                            if (thumbnailPopup.opened && thumbnailPopup.taskIndex === taskDelegate.index) {
-                                thumbnailPopup.close()
-                            } else {
-                                thumbnailPopup.targetDelegate = taskDelegate
-                                thumbnailPopup.taskIndex = taskDelegate.index
-                                thumbnailPopup.windowIds = winIds
-                                thumbnailPopup.isGroup = taskDelegate.model.IsGroupParent === true
-                                thumbnailPopup.open()
-                            }
-                        } else {
-                            thumbnailPopup.close()
-                            tasksModel.requestActivate(tasksModel.makeModelIndex(taskDelegate.index));
-                        }
+                        taskDelegate.activateTask()
                     }
                 }
                 onContainsMouseChanged: {
