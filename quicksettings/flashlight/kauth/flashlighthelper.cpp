@@ -34,7 +34,7 @@ KAuth::ActionReply Flashlighthelper::setbrightness(const QVariantMap &args)
     // (need to double-check this, but seems likely to be the cause of the random failures
     // we were seeing in testing)
     const QByteArray sysPathBytes = args.value("sysPath"_L1).toString().toUtf8();
-    const QByteArray brightnessBytes = args.value("brightness"_L1).toString().toUtf8();
+    QByteArray brightnessBytes = args.value("brightness"_L1).toString().toUtf8();
 
     if (sysPathBytes.isEmpty()) {
         qCWarning(FLASHLIGHTHELPER) << "sysPath argument is missing or empty";
@@ -54,8 +54,7 @@ KAuth::ActionReply Flashlighthelper::setbrightness(const QVariantMap &args)
         return KAuth::ActionReply::HelperErrorReply();
     }
 
-    // The libudev header declares value as const char*, so no cast needed.
-    int ret = udev_device_set_sysattr_value(device, "brightness", brightnessBytes.constData());
+    int ret = udev_device_set_sysattr_value(device, "brightness", brightnessBytes.data());
 
     udev_device_unref(device);
     udev_unref(udev);

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: Marco Allegretti
-// SPDX-License-Identifier: EUPL 1.2
+// SPDX-License-Identifier: EUPL-1.2
 
 import QtQuick
 import QtQuick.Controls as QQC2
