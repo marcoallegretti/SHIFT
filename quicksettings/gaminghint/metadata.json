@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "mightymarco4@gmail.com",
+                "Name": "Marco Allegretti"
+            }
+        ],
+        "Description": "Quick setting to toggle the Game Center dismiss hint banner",
+        "Icon": "dialog-information",
+        "Id": "org.kde.plasma.quicksetting.gaminghint",
+        "License": "EUPL-1.2",
+        "Name": "Game Center Hint",
+        "Version": "0.1",
+        "Website": ""
+    }
+}
