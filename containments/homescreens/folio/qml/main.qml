@@ -698,9 +698,14 @@ ContainmentItem {
 
     // Small persistent button at the top-right corner of the screen that lets
     // the user return to the Game Center after launching a game.
-    GamingHUD {
-        visible: ShellSettings.Settings.gamingModeEnabled && !root.gameCenterOpen
-        onOpenRequested: root.gameCenterOpen = true
+    // Wrapped in a Loader so the LayerShell Window is destroyed (not merely
+    // hidden) when not needed — hiding a LayerShell window with AnchorTop|Right
+    // but no fixed height causes a Wayland protocol error (height=0).
+    Loader {
+        active: ShellSettings.Settings.gamingModeEnabled && !root.gameCenterOpen
+        sourceComponent: GamingHUD {
+            onOpenRequested: root.gameCenterOpen = true
+        }
     }
 
     Rectangle {

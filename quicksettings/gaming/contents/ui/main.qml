@@ -35,11 +35,20 @@ QS.QuickSetting {
         active: false
 
         sourceComponent: Kirigami.PromptDialog {
-            title: i18n("Exit Gaming Mode")
-            subtitle: i18n("Switch back to the normal shell layout?")
-            standardButtons: Kirigami.Dialog.Yes | Kirigami.Dialog.Cancel
-
-            onAccepted: ShellSettings.Settings.gamingModeEnabled = false
+            id: theConfirmDialog
+            title: i18n("Leave gaming mode?")
+            subtitle: i18n("Your games will keep running in the background.")
+            standardButtons: Kirigami.Dialog.NoButton
+            customFooterActions: [
+                Kirigami.Action {
+                    text: i18n("Keep Playing")
+                    onTriggered: theConfirmDialog.close()
+                },
+                Kirigami.Action {
+                    text: i18n("Leave")
+                    onTriggered: ShellSettings.Settings.gamingModeEnabled = false
+                }
+            ]
             onClosed: confirmDisableDialog.active = false
         }
     }

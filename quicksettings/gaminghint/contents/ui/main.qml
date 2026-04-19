@@ -7,10 +7,11 @@ import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.plasma.private.mobileshell.quicksettingsplugin as QS
 
 QS.QuickSetting {
-    text: i18n("Game Center Hint")
+    text: i18n("Launch Hint")
     icon: "dialog-information"
     status: ""
     enabled: ShellSettings.Settings.gamingDismissHintEnabled
+    available: ShellSettings.Settings.gamingModeEnabled
 
     function toggle() {
         ShellSettings.Settings.gamingDismissHintEnabled = !ShellSettings.Settings.gamingDismissHintEnabled;
