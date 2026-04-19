@@ -4,9 +4,9 @@
 
 ### Desktop demos
 
-<video src="screenshots/quick_DesktopDemo.webm" controls width="600" alt="Desktop overview"></video>
-<video src="screenshots/quick_DesktopDemo_docked.webm" controls width="600" alt="Docked mode"></video>
-<video src="screenshots/quick_DesktopDemo_tiling.webm" controls width="600" alt="Tiling"></video>
+![Desktop overview](screenshots/quick_DesktopDemo.webm)
+![Docked mode](screenshots/quick_DesktopDemo_docked.webm)
+![Tiling](screenshots/quick_DesktopDemo_tiling.webm)
 
 Shift is a fork of [plasma-mobile](https://invent.kde.org/plasma/plasma-mobile).
 The upstream phone UI is untouched; convergence adds a layer on top.
