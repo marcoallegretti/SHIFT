@@ -126,7 +126,7 @@ Folio.DelegateTouchArea {
                 Rectangle {
                     anchors.fill: parent
                     radius: Kirigami.Units.cornerRadius
-                    color: Qt.rgba(1.0, 1.0, 1.0, 0.1)
+                    color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
                     visible: ShellSettings.Settings.convergenceModeEnabled && root.hovered
                 }
             }
@@ -142,7 +142,7 @@ Folio.DelegateTouchArea {
                 Layout.rightMargin: -parent.anchors.rightMargin + Kirigami.Units.smallSpacing
 
                 text: root.name
-                color: "white"
+                color: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Theme.textColor : "white"
             }
         }
     }
