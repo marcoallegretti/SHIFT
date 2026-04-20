@@ -110,6 +110,19 @@ Window {
             case GamingShell.GamepadManager.ButtonY:
                 root.requestExitGamingMode()
                 break
+            case GamingShell.GamepadManager.ButtonLeftShoulder:
+                root.cycleSourceFilter(-1)
+                break
+            case GamingShell.GamepadManager.ButtonRightShoulder:
+                root.cycleSourceFilter(1)
+                break
+            case GamingShell.GamepadManager.ButtonStart:
+                if (searchField.activeFocus) {
+                    grid.forceActiveFocus()
+                } else {
+                    searchField.forceActiveFocus()
+                }
+                break
             }
         }
 
@@ -118,6 +131,8 @@ Window {
                 stickState.leftX = value
             } else if (axis === GamingShell.GamepadManager.AxisLeftY) {
                 stickState.leftY = value
+            } else if (axis === GamingShell.GamepadManager.AxisRightY) {
+                stickState.rightY = value
             }
         }
     }
@@ -127,6 +142,7 @@ Window {
         id: stickState
         property real leftX: 0
         property real leftY: 0
+        property real rightY: 0
         readonly property real deadzone: 0.4
     }
 
@@ -162,6 +178,32 @@ Window {
                      || Math.abs(stickState.leftY) > stickState.deadzone)
         onRunningChanged: if (running) root.navigateByStick()
         onTriggered: root.navigateByStick()
+    }
+
+    // Right stick: smooth scroll the grid view
+    Timer {
+        id: stickScrollTimer
+        interval: 16  // ~60 Hz for smooth scrolling
+        repeat: true
+        running: root.visible && Math.abs(stickState.rightY) > stickState.deadzone
+        onTriggered: {
+            // Scale scroll speed with deflection, max ~12px per frame
+            grid.contentY = Math.max(grid.originY,
+                Math.min(grid.contentY + stickState.rightY * 12,
+                         grid.contentHeight - grid.height))
+        }
+    }
+
+    // Cycle through source filter tabs (All → Steam → Desktop → All …)
+    readonly property var _sourceFilters: ["", "steam", "desktop"]
+    function cycleSourceFilter(direction) {
+        var current = _sourceFilters.indexOf(
+            GamingShell.GameLauncherProvider.sourceFilter)
+        if (current < 0) current = 0
+        var next = (current + direction + _sourceFilters.length)
+                   % _sourceFilters.length
+        GamingShell.GameLauncherProvider.sourceFilter = _sourceFilters[next]
+        sourceFilterBar.currentIndex = next
     }
 
     Rectangle {
@@ -525,7 +567,7 @@ Window {
 
                 // Gamepad legend
                 PC3.Label {
-                    text: i18n("A: Select  B: Back  Y: Exit")
+                    text: i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }
