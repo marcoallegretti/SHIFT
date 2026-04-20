@@ -4,9 +4,12 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QDateTime>
 #include <QList>
 #include <QString>
 #include <qqmlregistration.h>
+
+#include <KSharedConfig>
 
 class GameLauncherProvider : public QAbstractListModel
 {
@@ -16,6 +19,8 @@ class GameLauncherProvider : public QAbstractListModel
 
     Q_PROPERTY(int count READ count NOTIFY countChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
+    Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
+    Q_PROPERTY(QString sourceFilter READ sourceFilter WRITE setSourceFilter NOTIFY sourceFilterChanged)
 
 public:
     explicit GameLauncherProvider(QObject *parent = nullptr);
@@ -37,13 +42,21 @@ public:
 
     int count() const;
     bool loading() const;
+    QString filterString() const;
+    void setFilterString(const QString &filter);
+    QString sourceFilter() const;
+    void setSourceFilter(const QString &source);
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void launch(int index);
+    Q_INVOKABLE void launchByStorageId(const QString &storageId);
+    Q_INVOKABLE QVariantList recentGames(int limit = 5) const;
 
 Q_SIGNALS:
     void countChanged();
     void loadingChanged();
+    void filterStringChanged();
+    void sourceFilterChanged();
     void gameLaunched(const QString &name);
 
 private:
@@ -54,13 +67,21 @@ private:
         QString storageId;
         QString launchCommand;
         QString artwork;
+        QDateTime lastPlayed;
         bool installed = true;
     };
 
     void loadDesktopGames();
     void loadSteamGames();
     void loadFlatpakGames();
+    void loadRecentTimestamps();
+    void saveRecentTimestamp(const QString &storageId, const QDateTime &when);
+    void applyFilter();
 
-    QList<GameEntry> m_games;
+    QList<GameEntry> m_allGames;
+    QList<GameEntry> m_games; // filtered view
+    QString m_filterString;
+    QString m_sourceFilter; // empty = all, or "desktop"/"steam"/"flatpak"
+    KSharedConfigPtr m_config;
     bool m_loading = false;
 };

@@ -49,6 +49,8 @@ Window {
 
     onVisibleChanged: {
         if (visible) {
+            GamingShell.GameLauncherProvider.filterString = ""
+            GamingShell.GameLauncherProvider.sourceFilter = ""
             GamingShell.GameLauncherProvider.refresh()
             if (runningGames.hasTasks) {
                 runningGames.focusFirstTask()
@@ -155,11 +157,122 @@ Window {
                 onMoveDownRequested: grid.forceActiveFocus()
             }
 
-            // ---- game grid ----
-            Kirigami.Heading {
-                level: 2
-                text: i18n("Library")
+            // ---- continue playing ----
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                visible: recentList.count > 0 && !runningGames.hasTasks
+
+                Kirigami.Heading {
+                    level: 2
+                    text: i18n("Continue Playing")
+                }
+
+                ListView {
+                    id: recentList
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Kirigami.Units.gridUnit * 5
+                    orientation: ListView.Horizontal
+                    spacing: Kirigami.Units.largeSpacing
+                    clip: true
+
+                    model: root.visible ? GamingShell.GameLauncherProvider.recentGames(5) : []
+
+                    delegate: QQC2.ItemDelegate {
+                        width: Kirigami.Units.gridUnit * 7
+                        height: recentList.height
+
+                        required property var modelData
+
+                        readonly property bool hasArt: modelData.artwork && modelData.artwork.length > 0
+
+                        background: Rectangle {
+                            radius: Kirigami.Units.cornerRadius
+                            color: parent.hovered ? Kirigami.Theme.hoverColor : "transparent"
+                        }
+
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Image {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                source: hasArt ? "file://" + modelData.artwork : ""
+                                fillMode: Image.PreserveAspectCrop
+                                visible: hasArt
+                                asynchronous: true
+                            }
+
+                            Kirigami.Icon {
+                                Layout.alignment: Qt.AlignHCenter
+                                implicitWidth: Kirigami.Units.iconSizes.large
+                                implicitHeight: Kirigami.Units.iconSizes.large
+                                source: modelData.icon
+                                visible: !hasArt
+                            }
+
+                            PC3.Label {
+                                Layout.fillWidth: true
+                                text: modelData.name
+                                maximumLineCount: 1
+                                elide: Text.ElideRight
+                                horizontalAlignment: Text.AlignHCenter
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
+                            }
+                        }
+
+                        onClicked: {
+                            GamingShell.GameLauncherProvider.launchByStorageId(modelData.storageId)
+                            root.gameStarted()
+                        }
+                    }
+                }
             }
+
+            // ---- search + filter ----
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.largeSpacing
+
+                Kirigami.SearchField {
+                    id: searchField
+                    Layout.fillWidth: true
+                    placeholderText: i18n("Search games…")
+                    onTextChanged: GamingShell.GameLauncherProvider.filterString = text
+
+                    Keys.onEscapePressed: {
+                        if (text.length > 0) {
+                            clear()
+                        } else {
+                            root.dismissRequested()
+                        }
+                    }
+                    Keys.onDownPressed: grid.forceActiveFocus()
+                }
+
+                QQC2.TabBar {
+                    id: sourceFilterBar
+                    Layout.alignment: Qt.AlignVCenter
+
+                    QQC2.TabButton {
+                        text: i18n("All")
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = ""
+                    }
+                    QQC2.TabButton {
+                        text: "Steam"
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "steam"
+                    }
+                    QQC2.TabButton {
+                        text: i18n("Desktop")
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "desktop"
+                    }
+                }
+            }
+
+            // ---- game grid ----
 
             GridView {
                 id: grid
@@ -169,11 +282,11 @@ Window {
 
                 model: GamingShell.GameLauncherProvider
 
-                readonly property real minCellSize: Kirigami.Units.gridUnit * 7
+                readonly property real minCellSize: Kirigami.Units.gridUnit * 8
                 readonly property int columns: Math.max(2, Math.floor(width / minCellSize))
 
                 cellWidth: Math.floor(width / columns)
-                cellHeight: cellWidth + Kirigami.Units.gridUnit * 2
+                cellHeight: Math.floor(cellWidth * 1.5) + Kirigami.Units.gridUnit * 2
 
                 keyNavigationEnabled: true
                 highlightMoveDuration: 0
@@ -208,9 +321,14 @@ Window {
                     required property string name
                     required property string icon
                     required property string source
+                    required property string artwork
+
+                    readonly property bool hasArt: artwork.length > 0
 
                     QQC2.ItemDelegate {
                         anchors.fill: parent
+                        anchors.margins: Kirigami.Units.smallSpacing
+                        padding: 0
 
                         readonly property bool isCurrent: GridView.isCurrentItem && grid.activeFocus
 
@@ -223,43 +341,99 @@ Window {
                             Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
                         }
 
-                        contentItem: ColumnLayout {
-                            spacing: Kirigami.Units.smallSpacing
+                        contentItem: Item {
+                            // ---- cover art tile ----
+                            ColumnLayout {
+                                anchors.fill: parent
+                                spacing: 0
+                                visible: hasArt
 
-                            Kirigami.Icon {
-                                Layout.alignment: Qt.AlignHCenter
-                                implicitWidth: Kirigami.Units.iconSizes.huge
-                                implicitHeight: Kirigami.Units.iconSizes.huge
-                                source: icon
+                                Image {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    source: hasArt ? "file://" + artwork : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    smooth: true
+                                    asynchronous: true
 
-                                scale: parent.parent.isCurrent ? 1.08 : 1.0
-                                Behavior on scale {
-                                    NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+                                    // Rounded top corners via layer
+                                    layer.enabled: true
+                                    layer.effect: Item {
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: Kirigami.Units.cornerRadius
+                                        }
+                                    }
+
+                                    scale: parent.parent.parent.isCurrent ? 1.03 : 1.0
+                                    Behavior on scale {
+                                        NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+                                    }
+                                }
+
+                                // Title beneath artwork
+                                PC3.Label {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: Kirigami.Units.gridUnit * 2
+                                    text: name
+                                    maximumLineCount: 1
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    leftPadding: Kirigami.Units.smallSpacing
+                                    rightPadding: Kirigami.Units.smallSpacing
+                                    color: parent.parent.parent.isCurrent
+                                           ? Kirigami.Theme.highlightedTextColor
+                                           : Kirigami.Theme.textColor
                                 }
                             }
 
-                            PC3.Label {
-                                Layout.alignment: Qt.AlignHCenter
-                                Layout.fillWidth: true
-                                text: name
-                                maximumLineCount: 2
-                                wrapMode: Text.Wrap
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideRight
-                                color: parent.parent.isCurrent
-                                       ? Kirigami.Theme.highlightedTextColor
-                                       : Kirigami.Theme.textColor
-                            }
+                            // ---- fallback icon tile ----
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: Kirigami.Units.smallSpacing
+                                visible: !hasArt
+                                spacing: Kirigami.Units.smallSpacing
 
-                            // Source badge
-                            PC3.Label {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: source === "steam" ? "Steam"
-                                    : source === "flatpak" ? "Flatpak"
-                                    : ""
-                                visible: source !== "desktop"
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
-                                opacity: 0.6
+                                Item { Layout.fillHeight: true }
+
+                                Kirigami.Icon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    implicitWidth: Kirigami.Units.iconSizes.huge
+                                    implicitHeight: Kirigami.Units.iconSizes.huge
+                                    source: icon
+
+                                    scale: parent.parent.parent.isCurrent ? 1.08 : 1.0
+                                    Behavior on scale {
+                                        NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+                                    }
+                                }
+
+                                PC3.Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.fillWidth: true
+                                    text: name
+                                    maximumLineCount: 2
+                                    wrapMode: Text.Wrap
+                                    horizontalAlignment: Text.AlignHCenter
+                                    elide: Text.ElideRight
+                                    color: parent.parent.parent.isCurrent
+                                           ? Kirigami.Theme.highlightedTextColor
+                                           : Kirigami.Theme.textColor
+                                }
+
+                                // Source badge
+                                PC3.Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: source === "steam" ? "Steam"
+                                        : source === "flatpak" ? "Flatpak"
+                                        : ""
+                                    visible: source !== "desktop"
+                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
+                                    opacity: 0.6
+                                }
+
+                                Item { Layout.fillHeight: true }
                             }
                         }
 

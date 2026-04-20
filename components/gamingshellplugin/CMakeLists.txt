@@ -18,6 +18,7 @@ target_link_libraries(gamingshellplugin PRIVATE
     KF6::I18n
     KF6::Service
     KF6::CoreAddons
+    KF6::ConfigCore
     SDL3::SDL3
 )
 

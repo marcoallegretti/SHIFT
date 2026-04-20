@@ -3,7 +3,9 @@
 
 #include "gamelauncherprovider.h"
 
+#include <KConfigGroup>
 #include <KService>
+#include <KSharedConfig>
 #include <KShell>
 #include <KSycoca>
 
@@ -15,8 +17,11 @@
 #include <QStandardPaths>
 #include <QTextStream>
 
+static const QString s_recentGroup = QStringLiteral("GamingRecentlyPlayed");
+
 GameLauncherProvider::GameLauncherProvider(QObject *parent)
     : QAbstractListModel(parent)
+    , m_config(KSharedConfig::openConfig(QStringLiteral("plasmamobilerc")))
 {
     connect(KSycoca::self(), &KSycoca::databaseChanged, this, &GameLauncherProvider::refresh);
     refresh();
@@ -80,23 +85,22 @@ void GameLauncherProvider::refresh()
     m_loading = true;
     Q_EMIT loadingChanged();
 
-    beginResetModel();
-    m_games.clear();
+    m_allGames.clear();
 
     loadDesktopGames();
     loadSteamGames();
     loadFlatpakGames();
+    loadRecentTimestamps();
 
     // Sort alphabetically, case-insensitive
-    std::sort(m_games.begin(), m_games.end(), [](const GameEntry &a, const GameEntry &b) {
+    std::sort(m_allGames.begin(), m_allGames.end(), [](const GameEntry &a, const GameEntry &b) {
         return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
     });
 
-    endResetModel();
+    applyFilter();
 
     m_loading = false;
     Q_EMIT loadingChanged();
-    Q_EMIT countChanged();
 }
 
 void GameLauncherProvider::launch(int index)
@@ -128,6 +132,54 @@ void GameLauncherProvider::launch(int index)
     }
 
     Q_EMIT gameLaunched(g.name);
+
+    // Record timestamp for "recently played"
+    saveRecentTimestamp(g.storageId, QDateTime::currentDateTime());
+
+    // Update the in-memory entry so recentGames() picks it up immediately
+    for (auto &entry : m_allGames) {
+        if (entry.storageId == g.storageId) {
+            entry.lastPlayed = QDateTime::currentDateTime();
+            break;
+        }
+    }
+}
+
+void GameLauncherProvider::launchByStorageId(const QString &storageId)
+{
+    for (int i = 0; i < m_allGames.size(); ++i) {
+        if (m_allGames.at(i).storageId == storageId) {
+            // Find the index in the filtered model, or launch from allGames directly
+            for (int j = 0; j < m_games.size(); ++j) {
+                if (m_games.at(j).storageId == storageId) {
+                    launch(j);
+                    return;
+                }
+            }
+            // Not in filtered view — launch directly from allGames
+            const auto &g = m_allGames.at(i);
+            if (g.source == QLatin1String("desktop")) {
+                auto service = KService::serviceByStorageId(g.storageId);
+                if (service) {
+                    QStringList args = KShell::splitArgs(service->exec());
+                    if (!args.isEmpty()) {
+                        QString program = args.takeFirst();
+                        QProcess::startDetached(program, args);
+                    }
+                }
+            } else {
+                QStringList parts = g.launchCommand.split(QLatin1Char(' '));
+                if (!parts.isEmpty()) {
+                    QString program = parts.takeFirst();
+                    QProcess::startDetached(program, parts);
+                }
+            }
+            Q_EMIT gameLaunched(g.name);
+            saveRecentTimestamp(g.storageId, QDateTime::currentDateTime());
+            m_allGames[i].lastPlayed = QDateTime::currentDateTime();
+            return;
+        }
+    }
 }
 
 // --- XDG .desktop games ---
@@ -158,7 +210,7 @@ void GameLauncherProvider::loadDesktopGames()
         entry.storageId = service->storageId();
         entry.launchCommand = service->exec();
         entry.installed = true;
-        m_games.append(entry);
+        m_allGames.append(entry);
     }
 }
 
@@ -267,7 +319,7 @@ void GameLauncherProvider::loadSteamGames()
                 }
             }
 
-            m_games.append(entry);
+            m_allGames.append(entry);
         }
     }
 }
@@ -281,4 +333,104 @@ void GameLauncherProvider::loadFlatpakGames()
     // This method is a hook for future Flatpak-specific enrichment
     // (e.g. querying flatpak metadata for games that don't set
     // the Game category properly).
+}
+
+QString GameLauncherProvider::filterString() const
+{
+    return m_filterString;
+}
+
+void GameLauncherProvider::setFilterString(const QString &filter)
+{
+    if (m_filterString == filter) {
+        return;
+    }
+    m_filterString = filter;
+    Q_EMIT filterStringChanged();
+    applyFilter();
+}
+
+QString GameLauncherProvider::sourceFilter() const
+{
+    return m_sourceFilter;
+}
+
+void GameLauncherProvider::setSourceFilter(const QString &source)
+{
+    if (m_sourceFilter == source) {
+        return;
+    }
+    m_sourceFilter = source;
+    Q_EMIT sourceFilterChanged();
+    applyFilter();
+}
+
+void GameLauncherProvider::applyFilter()
+{
+    beginResetModel();
+    m_games.clear();
+
+    for (const auto &g : std::as_const(m_allGames)) {
+        if (!m_sourceFilter.isEmpty() && g.source != m_sourceFilter) {
+            continue;
+        }
+        if (!m_filterString.isEmpty() && !g.name.contains(m_filterString, Qt::CaseInsensitive)) {
+            continue;
+        }
+        m_games.append(g);
+    }
+
+    endResetModel();
+    Q_EMIT countChanged();
+}
+
+void GameLauncherProvider::loadRecentTimestamps()
+{
+    const KConfigGroup group(m_config, s_recentGroup);
+    for (auto &entry : m_allGames) {
+        const QString key = entry.storageId;
+        if (group.hasKey(key)) {
+            entry.lastPlayed = group.readEntry(key, QDateTime());
+        }
+    }
+}
+
+void GameLauncherProvider::saveRecentTimestamp(const QString &storageId, const QDateTime &when)
+{
+    KConfigGroup group(m_config, s_recentGroup);
+    group.writeEntry(storageId, when);
+    group.sync();
+}
+
+QVariantList GameLauncherProvider::recentGames(int limit) const
+{
+    // Gather entries that have been launched at least once
+    QList<const GameEntry *> recent;
+    for (const auto &g : m_allGames) {
+        if (g.lastPlayed.isValid()) {
+            recent.append(&g);
+        }
+    }
+
+    // Most recent first
+    std::sort(recent.begin(), recent.end(), [](const GameEntry *a, const GameEntry *b) {
+        return a->lastPlayed > b->lastPlayed;
+    });
+
+    if (recent.size() > limit) {
+        recent.resize(limit);
+    }
+
+    QVariantList result;
+    result.reserve(recent.size());
+    for (const auto *g : recent) {
+        QVariantMap map;
+        map[QStringLiteral("name")] = g->name;
+        map[QStringLiteral("icon")] = g->icon;
+        map[QStringLiteral("source")] = g->source;
+        map[QStringLiteral("storageId")] = g->storageId;
+        map[QStringLiteral("artwork")] = g->artwork;
+        result.append(map);
+    }
+    return result;
 }
