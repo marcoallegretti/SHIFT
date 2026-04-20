@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 
 find_package(SDL3 REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Sql)
 
 ecm_add_qml_module(gamingshellplugin URI org.kde.plasma.private.mobileshell.gamingshellplugin GENERATE_PLUGIN_SOURCE)
 
@@ -15,7 +16,9 @@ target_link_libraries(gamingshellplugin PRIVATE
     Qt::Core
     Qt::Qml
     Qt::Quick
+    Qt::Sql
     KF6::I18n
+    KF6::KIOGui
     KF6::Service
     KF6::CoreAddons
     KF6::ConfigCore

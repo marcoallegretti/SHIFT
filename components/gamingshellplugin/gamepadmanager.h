@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <qqmlregistration.h>
 
+class QQmlEngine;
+class QJSEngine;
 class GamepadDevice;
 
 class GamepadManager : public QAbstractListModel
@@ -23,6 +25,8 @@ class GamepadManager : public QAbstractListModel
 public:
     explicit GamepadManager(QObject *parent = nullptr);
     ~GamepadManager() override;
+
+    static GamepadManager *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
 
     enum Roles {
         DeviceRole = Qt::UserRole + 1,
@@ -95,6 +99,7 @@ private:
 
     bool m_active = false;
     bool m_sdlInitialized = false;
+    int m_batteryCounter = 0;
     QTimer m_pollTimer;
     QList<GamepadDevice *> m_gamepads;
 };

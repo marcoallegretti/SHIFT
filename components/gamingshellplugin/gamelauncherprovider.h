@@ -74,6 +74,8 @@ private:
     void loadDesktopGames();
     void loadSteamGames();
     void loadFlatpakGames();
+    void loadLutrisGames();
+    void loadHeroicGames();
     void deduplicateGames();
     void loadRecentTimestamps();
     void saveRecentTimestamp(const QString &storageId, const QDateTime &when);

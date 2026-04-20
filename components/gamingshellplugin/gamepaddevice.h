@@ -36,7 +36,7 @@ public:
     int playerIndex() const;
     void setPlayerIndex(int index);
 
-    Q_INVOKABLE bool rumble(int lowFreqMs, int highFreqMs, int durationMs);
+    Q_INVOKABLE bool rumble(int lowIntensity, int highIntensity, int durationMs);
     Q_INVOKABLE bool setLED(int r, int g, int b);
 
     SDL_Gamepad *sdlGamepad() const;

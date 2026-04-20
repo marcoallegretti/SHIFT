@@ -7,6 +7,8 @@
 #include <SDL3/SDL_power.h>
 #include <SDL3/SDL_properties.h>
 
+#include <algorithm>
+
 GamepadDevice::GamepadDevice(SDL_Gamepad *pad, int id, QObject *parent)
     : QObject(parent)
     , m_pad(pad)
@@ -96,16 +98,20 @@ void GamepadDevice::setPlayerIndex(int index)
     if (!m_pad) {
         return;
     }
-    SDL_SetGamepadPlayerIndex(m_pad, index);
-    Q_EMIT playerIndexChanged();
+    if (SDL_SetGamepadPlayerIndex(m_pad, index)) {
+        Q_EMIT playerIndexChanged();
+    }
 }
 
-bool GamepadDevice::rumble(int lowFreqMs, int highFreqMs, int durationMs)
+bool GamepadDevice::rumble(int lowIntensity, int highIntensity, int durationMs)
 {
     if (!m_pad) {
         return false;
     }
-    return SDL_RumbleGamepad(m_pad, static_cast<uint16_t>(lowFreqMs), static_cast<uint16_t>(highFreqMs), static_cast<uint32_t>(durationMs));
+    auto lo = static_cast<uint16_t>(std::clamp(lowIntensity, 0, 65535));
+    auto hi = static_cast<uint16_t>(std::clamp(highIntensity, 0, 65535));
+    auto dur = static_cast<uint32_t>(std::clamp(durationMs, 0, durationMs));
+    return SDL_RumbleGamepad(m_pad, lo, hi, dur);
 }
 
 bool GamepadDevice::setLED(int r, int g, int b)
@@ -113,7 +119,10 @@ bool GamepadDevice::setLED(int r, int g, int b)
     if (!m_pad) {
         return false;
     }
-    return SDL_SetGamepadLED(m_pad, static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b));
+    auto cr = static_cast<uint8_t>(std::clamp(r, 0, 255));
+    auto cg = static_cast<uint8_t>(std::clamp(g, 0, 255));
+    auto cb = static_cast<uint8_t>(std::clamp(b, 0, 255));
+    return SDL_SetGamepadLED(m_pad, cr, cg, cb);
 }
 
 SDL_Gamepad *GamepadDevice::sdlGamepad() const

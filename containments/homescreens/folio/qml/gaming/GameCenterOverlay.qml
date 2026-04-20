@@ -12,7 +12,9 @@ import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.plasma.private.mobileshell.gamingshellplugin as GamingShell
+import org.kde.plasma.private.mobileshell.screenbrightnessplugin as ScreenBrightness
 import org.kde.layershell 1.0 as LayerShell
+import org.kde.plasma.clock
 
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
@@ -76,6 +78,32 @@ Window {
         enabled: root.visible
 
         function onButtonPressed(button, gamepadIndex) {
+            // Route to quick settings panel when open
+            if (quickSettings.opened) {
+                switch (button) {
+                case GamingShell.GamepadManager.ButtonDPadUp:
+                    quickSettings.gamepadUp()
+                    return
+                case GamingShell.GamepadManager.ButtonDPadDown:
+                    quickSettings.gamepadDown()
+                    return
+                case GamingShell.GamepadManager.ButtonDPadLeft:
+                    quickSettings.gamepadLeft()
+                    return
+                case GamingShell.GamepadManager.ButtonDPadRight:
+                    quickSettings.gamepadRight()
+                    return
+                case GamingShell.GamepadManager.ButtonA:
+                    quickSettings.gamepadAccept()
+                    return
+                case GamingShell.GamepadManager.ButtonB:
+                case GamingShell.GamepadManager.ButtonBack:
+                    quickSettings.close()
+                    return
+                }
+                return // eat all other buttons while panel is open
+            }
+
             switch (button) {
             case GamingShell.GamepadManager.ButtonDPadUp:
                 if (grid.activeFocus) {
@@ -130,6 +158,9 @@ Window {
                     searchField.forceActiveFocus()
                 }
                 break
+            case GamingShell.GamepadManager.ButtonBack:
+                quickSettings.toggle()
+                break
             }
         }
 
@@ -154,6 +185,21 @@ Window {
     }
 
     function navigateByStick() {
+        // Route stick to quick settings when open
+        if (quickSettings.opened) {
+            if (stickState.leftY < -stickState.deadzone) {
+                quickSettings.gamepadUp()
+            } else if (stickState.leftY > stickState.deadzone) {
+                quickSettings.gamepadDown()
+            }
+            if (stickState.leftX < -stickState.deadzone) {
+                quickSettings.gamepadLeft()
+            } else if (stickState.leftX > stickState.deadzone) {
+                quickSettings.gamepadRight()
+            }
+            return
+        }
+
         if (stickState.leftY < -stickState.deadzone) {
             if (grid.activeFocus) {
                 if (grid.currentIndex < grid.columns && runningGames.hasTasks) {
@@ -202,7 +248,7 @@ Window {
     }
 
     // Cycle through source filter tabs (All → Steam → Desktop → All …)
-    readonly property var _sourceFilters: ["", "steam", "desktop"]
+    readonly property var _sourceFilters: ["", "steam", "desktop", "lutris", "heroic"]
     function cycleSourceFilter(direction) {
         var current = _sourceFilters.indexOf(
             GamingShell.GameLauncherProvider.sourceFilter)
@@ -238,11 +284,61 @@ Window {
             // ---- header ----
             RowLayout {
                 Layout.fillWidth: true
+                spacing: Kirigami.Units.largeSpacing
 
                 Kirigami.Heading {
-                    Layout.fillWidth: true
                     text: i18n("Game Center")
                     level: 1
+                }
+
+                Item { Layout.fillWidth: true }
+
+                // ---- system status indicators ----
+                RowLayout {
+                    spacing: Kirigami.Units.smallSpacing
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Clock { id: wallClock }
+
+                    PC3.Label {
+                        text: Qt.formatTime(wallClock.dateTime,
+                              MobileShell.ShellUtil.isSystem24HourFormat ? "h:mm" : "h:mm ap")
+                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.9
+                        opacity: 0.8
+                    }
+
+                    Kirigami.Icon {
+                        implicitWidth: Kirigami.Units.iconSizes.small
+                        implicitHeight: Kirigami.Units.iconSizes.small
+                        source: MobileShell.AudioInfo.icon
+                        visible: MobileShell.AudioInfo.isVisible
+                        opacity: 0.7
+                    }
+
+                    MobileShell.InternetIndicator {
+                        implicitWidth: Kirigami.Units.iconSizes.small
+                        implicitHeight: Kirigami.Units.iconSizes.small
+                        opacity: 0.7
+                    }
+
+                    MobileShell.BluetoothIndicator {
+                        implicitWidth: Kirigami.Units.iconSizes.small
+                        implicitHeight: Kirigami.Units.iconSizes.small
+                        opacity: 0.7
+                    }
+
+                    MobileShell.BatteryIndicator {
+                        textPixelSize: Kirigami.Units.gridUnit * 0.55
+                        opacity: 0.7
+                    }
+                }
+
+                // ---- quick settings button ----
+                QQC2.ToolButton {
+                    icon.name: "configure"
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.text: i18n("Quick Settings")
+                    onClicked: quickSettings.open()
                 }
 
                 QQC2.ToolButton {
@@ -371,6 +467,16 @@ Window {
                         text: i18n("Desktop")
                         width: implicitWidth
                         onClicked: GamingShell.GameLauncherProvider.sourceFilter = "desktop"
+                    }
+                    QQC2.TabButton {
+                        text: "Lutris"
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "lutris"
+                    }
+                    QQC2.TabButton {
+                        text: "Heroic"
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "heroic"
                     }
                 }
             }
@@ -534,6 +640,8 @@ Window {
                                     Layout.alignment: Qt.AlignHCenter
                                     text: source === "steam" ? "Steam"
                                         : source === "flatpak" ? "Flatpak"
+                                        : source === "lutris" ? "Lutris"
+                                        : source === "heroic" ? "Heroic"
                                         : ""
                                     visible: source !== "desktop"
                                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
@@ -588,13 +696,19 @@ Window {
                 // Gamepad legend
                 PC3.Label {
                     text: runningGames.hasTasks
-                          ? i18n("A: Select  X: Close  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
-                          : i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
+                          ? i18n("A: Select  X: Close  B: Back  Y: Exit  ⊞: Settings  ☰: Search")
+                          : i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ⊞: Settings  ☰: Search")
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }
             }
         }
+    }
+
+    // Quick settings slide-out panel
+    GamingQuickSettings {
+        id: quickSettings
+        z: 50
     }
 
     // Launch transition: brief fade to black, then dismiss

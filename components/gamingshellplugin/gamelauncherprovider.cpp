@@ -4,6 +4,7 @@
 #include "gamelauncherprovider.h"
 
 #include <KConfigGroup>
+#include <KIO/ApplicationLauncherJob>
 #include <KService>
 #include <KSharedConfig>
 #include <KShell>
@@ -12,8 +13,13 @@
 #include <QDebug>
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTextStream>
 
@@ -90,6 +96,8 @@ void GameLauncherProvider::refresh()
     loadDesktopGames();
     loadSteamGames();
     loadFlatpakGames();
+    loadLutrisGames();
+    loadHeroicGames();
     loadRecentTimestamps();
 
     // Deduplicate: when the same game appears from multiple sources,
@@ -137,14 +145,14 @@ void GameLauncherProvider::launchEntry(GameEntry &entry)
     if (entry.source == QLatin1String("desktop")) {
         auto service = KService::serviceByStorageId(entry.storageId);
         if (service) {
-            QStringList args = KShell::splitArgs(service->exec());
-            if (!args.isEmpty()) {
-                QString program = args.takeFirst();
-                QProcess::startDetached(program, args);
-            }
+            auto *job = new KIO::ApplicationLauncherJob(service);
+            job->start();
         }
+    } else if (entry.launchCommand.contains(QStringLiteral("://"))) {
+        // Protocol handler (e.g. heroic://launch/...) — open via xdg-open
+        QProcess::startDetached(QStringLiteral("xdg-open"), {entry.launchCommand});
     } else {
-        QStringList parts = entry.launchCommand.split(QLatin1Char(' '));
+        QStringList parts = KShell::splitArgs(entry.launchCommand);
         if (!parts.isEmpty()) {
             QString program = parts.takeFirst();
             QProcess::startDetached(program, parts);
@@ -159,19 +167,20 @@ void GameLauncherProvider::launchEntry(GameEntry &entry)
 
 void GameLauncherProvider::deduplicateGames()
 {
-    // Build a set of names from Steam entries (case-insensitive).
-    QSet<QString> steamNames;
+    // Build a set of names from dedicated launcher entries (case-insensitive).
+    // These have better artwork and metadata, so they win over plain .desktop entries.
+    QSet<QString> launcherNames;
     for (const auto &g : std::as_const(m_allGames)) {
-        if (g.source == QLatin1String("steam")) {
-            steamNames.insert(g.name.toLower());
+        if (g.source == QLatin1String("steam") || g.source == QLatin1String("lutris") || g.source == QLatin1String("heroic")) {
+            launcherNames.insert(g.name.toLower());
         }
     }
 
-    // Remove desktop entries whose name matches a Steam entry.
+    // Remove desktop entries whose name matches a launcher entry.
     m_allGames.erase(std::remove_if(m_allGames.begin(),
                                     m_allGames.end(),
-                                    [&steamNames](const GameEntry &g) {
-                                        return g.source == QLatin1String("desktop") && steamNames.contains(g.name.toLower());
+                                    [&launcherNames](const GameEntry &g) {
+                                        return g.source == QLatin1String("desktop") && launcherNames.contains(g.name.toLower());
                                     }),
                      m_allGames.end());
 }
@@ -327,6 +336,171 @@ void GameLauncherProvider::loadFlatpakGames()
     // This method is a hook for future Flatpak-specific enrichment
     // (e.g. querying flatpak metadata for games that don't set
     // the Game category properly).
+}
+
+// --- Lutris library (SQLite) ---
+
+void GameLauncherProvider::loadLutrisGames()
+{
+    const QString dbPath = QDir::homePath() + QStringLiteral("/.local/share/lutris/pga.db");
+    if (!QFile::exists(dbPath)) {
+        return;
+    }
+
+    // Use a unique connection name to avoid conflicting with other code.
+    // RAII guard ensures QSqlDatabase::removeDatabase runs on every exit path.
+    const QString connName = QStringLiteral("lutris_games_%1").arg(reinterpret_cast<quintptr>(this));
+    const auto dbCleanup = qScopeGuard([&connName]() {
+        QSqlDatabase::removeDatabase(connName);
+    });
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connName);
+        db.setDatabaseName(dbPath);
+        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+
+        if (!db.open()) {
+            qWarning() << "GameLauncherProvider: cannot open Lutris DB" << dbPath;
+            return;
+        }
+
+        QSqlQuery query(db);
+        query.prepare(QStringLiteral("SELECT name, slug, runner, coverart, id FROM games WHERE installed = 1"));
+
+        if (!query.exec()) {
+            qWarning() << "GameLauncherProvider: Lutris query failed";
+            db.close();
+            return;
+        }
+
+        const QString coverBase = QDir::homePath() + QStringLiteral("/.local/share/lutris/coverart/");
+
+        while (query.next()) {
+            GameEntry entry;
+            entry.name = query.value(0).toString();
+            const QString slug = query.value(1).toString();
+            const QString runner = query.value(2).toString();
+            const QString coverart = query.value(3).toString();
+            const int gameId = query.value(4).toInt();
+
+            entry.source = QStringLiteral("lutris");
+            entry.storageId = QStringLiteral("lutris:%1").arg(slug);
+            entry.icon = QStringLiteral("lutris");
+            entry.launchCommand = QStringLiteral("lutris lutris:rungameid/%1").arg(gameId);
+            entry.installed = true;
+
+            // Cover art: Lutris stores covers in ~/.local/share/lutris/coverart/
+            if (!coverart.isEmpty()) {
+                entry.artwork = coverart;
+            } else {
+                const QString coverFile = coverBase + slug + QStringLiteral(".jpg");
+                if (QFile::exists(coverFile)) {
+                    entry.artwork = coverFile;
+                }
+            }
+
+            m_allGames.append(entry);
+        }
+
+        db.close();
+    }
+    // dbCleanup guard handles QSqlDatabase::removeDatabase(connName)
+}
+
+// --- Heroic Games Launcher (JSON) ---
+
+void GameLauncherProvider::loadHeroicGames()
+{
+    // Heroic stores library caches for different stores
+    const QString heroicBase = QDir::homePath() + QStringLiteral("/.config/heroic");
+    if (!QDir(heroicBase).exists()) {
+        return;
+    }
+
+    // Check both GOG and Epic (Legendary) library caches
+    const QStringList libFiles = {
+        heroicBase + QStringLiteral("/store_cache/gog_library.json"),
+        heroicBase + QStringLiteral("/store_cache/legendary_library.json"),
+        heroicBase + QStringLiteral("/store_cache/nile_library.json"),
+    };
+
+    for (const auto &libPath : libFiles) {
+        QFile libFile(libPath);
+        if (!libFile.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+
+        QJsonParseError err;
+        const QJsonDocument doc = QJsonDocument::fromJson(libFile.readAll(), &err);
+        if (err.error != QJsonParseError::NoError) {
+            qWarning() << "GameLauncherProvider: JSON parse error in" << libPath << err.errorString();
+            continue;
+        }
+
+        // Heroic library JSON: { "library": [ { "app_name": ..., "title": ..., ... } ] }
+        // or it can be a plain array at the top level
+        QJsonArray games;
+        if (doc.isArray()) {
+            games = doc.array();
+        } else if (doc.isObject()) {
+            games = doc.object().value(QStringLiteral("library")).toArray();
+            if (games.isEmpty()) {
+                games = doc.object().value(QStringLiteral("games")).toArray();
+            }
+        }
+
+        const bool isGog = libPath.contains(QStringLiteral("gog"));
+        const bool isNile = libPath.contains(QStringLiteral("nile"));
+
+        for (const auto &val : games) {
+            const QJsonObject obj = val.toObject();
+            const QString appName = obj.value(QStringLiteral("app_name")).toString();
+            const QString title = obj.value(QStringLiteral("title")).toString();
+
+            if (title.isEmpty()) {
+                continue;
+            }
+
+            // Check if installed
+            const auto isInstalled = obj.value(QStringLiteral("is_installed"));
+            if (isInstalled.isBool() && !isInstalled.toBool()) {
+                continue;
+            }
+
+            GameEntry entry;
+            entry.name = title;
+            entry.source = QStringLiteral("heroic");
+            entry.storageId = QStringLiteral("heroic:%1").arg(appName);
+            entry.icon = QStringLiteral("heroic");
+            entry.installed = true;
+
+            // Launch via Heroic protocol handler
+            if (isGog) {
+                entry.launchCommand = QStringLiteral("heroic://launch/gog/%1").arg(appName);
+            } else if (isNile) {
+                entry.launchCommand = QStringLiteral("heroic://launch/nile/%1").arg(appName);
+            } else {
+                entry.launchCommand = QStringLiteral("heroic://launch/legendary/%1").arg(appName);
+            }
+
+            // Cover art: Heroic caches artwork
+            const QString artPath = obj.value(QStringLiteral("art_cover")).toString();
+            if (!artPath.isEmpty() && QFile::exists(artPath)) {
+                entry.artwork = artPath;
+            } else {
+                // Try Heroic's thumbnail cache
+                const QString thumbDir = heroicBase + QStringLiteral("/images/") + appName + QStringLiteral("/");
+                const QDir thumbs(thumbDir);
+                if (thumbs.exists()) {
+                    const auto images = thumbs.entryList({QStringLiteral("*.jpg"), QStringLiteral("*.png"), QStringLiteral("*.webp")}, QDir::Files);
+                    if (!images.isEmpty()) {
+                        entry.artwork = thumbDir + images.first();
+                    }
+                }
+            }
+
+            m_allGames.append(entry);
+        }
+    }
 }
 
 QString GameLauncherProvider::filterString() const

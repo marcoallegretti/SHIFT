@@ -79,6 +79,7 @@ ecm_target_qml_sources(org.kde.plasma.mobile.homescreen.folio SOURCES
 ecm_target_qml_sources(org.kde.plasma.mobile.homescreen.folio SOURCES
     qml/gaming/GameCenterOverlay.qml
     qml/gaming/GamingHUD.qml
+    qml/gaming/GamingQuickSettings.qml
     qml/gaming/RunningGamesView.qml
     PATH gaming
 )

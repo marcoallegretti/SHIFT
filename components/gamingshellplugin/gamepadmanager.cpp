@@ -8,6 +8,9 @@
 #include <SDL3/SDL_gamepad.h>
 
 #include <QDebug>
+#include <QQmlEngine>
+
+#include <algorithm>
 
 GamepadManager::GamepadManager(QObject *parent)
     : QAbstractListModel(parent)
@@ -19,6 +22,16 @@ GamepadManager::GamepadManager(QObject *parent)
 GamepadManager::~GamepadManager()
 {
     stop();
+}
+
+GamepadManager *GamepadManager::create(QQmlEngine *qmlEngine, QJSEngine *jsEngine)
+{
+    Q_UNUSED(jsEngine)
+    static GamepadManager *s_instance = nullptr;
+    if (!s_instance) {
+        s_instance = new GamepadManager(qmlEngine);
+    }
+    return s_instance;
 }
 
 // --- QAbstractListModel ---
@@ -180,7 +193,7 @@ void GamepadManager::poll()
         case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
             int idx = indexForInstanceId(event.gaxis.which);
             if (idx >= 0) {
-                float normalized = static_cast<float>(event.gaxis.value) / 32767.0f;
+                float normalized = std::clamp(static_cast<float>(event.gaxis.value) / 32767.0f, -1.0f, 1.0f);
                 Q_EMIT axisChanged(event.gaxis.axis, normalized, idx);
             }
             break;
@@ -192,9 +205,8 @@ void GamepadManager::poll()
     }
 
     // Refresh battery state periodically (every ~5 seconds = 300 frames)
-    static int batteryCounter = 0;
-    if (++batteryCounter >= 300) {
-        batteryCounter = 0;
+    if (++m_batteryCounter >= 300) {
+        m_batteryCounter = 0;
         for (auto *dev : std::as_const(m_gamepads)) {
             dev->refreshBattery();
         }
