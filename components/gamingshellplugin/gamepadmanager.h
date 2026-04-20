@@ -53,6 +53,17 @@ public:
     };
     Q_ENUM(Button)
 
+    // Axes matching SDL_GamepadAxis
+    enum Axis {
+        AxisLeftX,
+        AxisLeftY,
+        AxisRightX,
+        AxisRightY,
+        AxisLeftTrigger,
+        AxisRightTrigger,
+    };
+    Q_ENUM(Axis)
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;

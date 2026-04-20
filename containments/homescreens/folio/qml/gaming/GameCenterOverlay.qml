@@ -29,6 +29,16 @@ Window {
         exitGamingDialog.item.open()
     }
 
+    function launchGame(index) {
+        GamingShell.GameLauncherProvider.launch(index)
+        launchFade.restart()
+    }
+
+    function launchGameByStorageId(storageId) {
+        GamingShell.GameLauncherProvider.launchByStorageId(storageId)
+        launchFade.restart()
+    }
+
     width: Screen.width
     height: Screen.height
     color: "transparent"
@@ -91,8 +101,7 @@ Window {
                 break
             case GamingShell.GamepadManager.ButtonA:
                 if (grid.activeFocus && grid.currentItem) {
-                    GamingShell.GameLauncherProvider.launch(grid.currentIndex)
-                    root.gameStarted()
+                    root.launchGame(grid.currentIndex)
                 }
                 break
             case GamingShell.GamepadManager.ButtonB:
@@ -103,6 +112,56 @@ Window {
                 break
             }
         }
+
+        function onAxisChanged(axis, value, gamepadIndex) {
+            if (axis === GamingShell.GamepadManager.AxisLeftX) {
+                stickState.leftX = value
+            } else if (axis === GamingShell.GamepadManager.AxisLeftY) {
+                stickState.leftY = value
+            }
+        }
+    }
+
+    // Left-stick navigation state + repeat timer
+    QtObject {
+        id: stickState
+        property real leftX: 0
+        property real leftY: 0
+        readonly property real deadzone: 0.4
+    }
+
+    function navigateByStick() {
+        if (stickState.leftY < -stickState.deadzone) {
+            if (grid.activeFocus) {
+                if (grid.currentIndex < grid.columns && runningGames.hasTasks) {
+                    runningGames.focusFirstTask()
+                } else {
+                    grid.moveCurrentIndexUp()
+                }
+            }
+        } else if (stickState.leftY > stickState.deadzone) {
+            if (runningGames.activeFocus) {
+                grid.forceActiveFocus()
+            } else if (grid.activeFocus) {
+                grid.moveCurrentIndexDown()
+            }
+        }
+        if (stickState.leftX < -stickState.deadzone && grid.activeFocus) {
+            grid.moveCurrentIndexLeft()
+        } else if (stickState.leftX > stickState.deadzone && grid.activeFocus) {
+            grid.moveCurrentIndexRight()
+        }
+    }
+
+    Timer {
+        id: stickNavTimer
+        interval: 150
+        repeat: true
+        running: root.visible
+                 && (Math.abs(stickState.leftX) > stickState.deadzone
+                     || Math.abs(stickState.leftY) > stickState.deadzone)
+        onRunningChanged: if (running) root.navigateByStick()
+        onTriggered: root.navigateByStick()
     }
 
     Rectangle {
@@ -219,10 +278,7 @@ Window {
                             }
                         }
 
-                        onClicked: {
-                            GamingShell.GameLauncherProvider.launchByStorageId(modelData.storageId)
-                            root.gameStarted()
-                        }
+                        onClicked: root.launchGameByStorageId(modelData.storageId)
                     }
                 }
             }
@@ -304,8 +360,7 @@ Window {
 
                 Keys.onReturnPressed: {
                     if (currentIndex >= 0) {
-                        GamingShell.GameLauncherProvider.launch(currentIndex)
-                        root.gameStarted()
+                        root.launchGame(currentIndex)
                     }
                 }
                 Keys.onEnterPressed: Keys.onReturnPressed(event)
@@ -427,10 +482,7 @@ Window {
                             }
                         }
 
-                        onClicked: {
-                            GamingShell.GameLauncherProvider.launch(index)
-                            root.gameStarted()
-                        }
+                        onClicked: root.launchGame(index)
                     }
                 }
             }
@@ -477,6 +529,33 @@ Window {
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }
+            }
+        }
+    }
+
+    // Launch transition: brief fade to black, then dismiss
+    Rectangle {
+        id: launchCurtain
+        anchors.fill: parent
+        color: "black"
+        opacity: 0
+        z: 100
+
+        Behavior on opacity {
+            NumberAnimation { duration: 250; easing.type: Easing.InQuad }
+        }
+    }
+
+    Timer {
+        id: launchFade
+        interval: 300
+        onTriggered: {
+            launchCurtain.opacity = 0
+            root.gameStarted()
+        }
+        onRunningChanged: {
+            if (running) {
+                launchCurtain.opacity = 1
             }
         }
     }
