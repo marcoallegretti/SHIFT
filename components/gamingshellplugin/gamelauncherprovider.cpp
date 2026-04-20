@@ -92,6 +92,10 @@ void GameLauncherProvider::refresh()
     loadFlatpakGames();
     loadRecentTimestamps();
 
+    // Deduplicate: when the same game appears from multiple sources,
+    // prefer Steam (has artwork + Proton handling) over desktop.
+    deduplicateGames();
+
     // Sort alphabetically, case-insensitive
     std::sort(m_allGames.begin(), m_allGames.end(), [](const GameEntry &a, const GameEntry &b) {
         return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
@@ -180,6 +184,25 @@ void GameLauncherProvider::launchByStorageId(const QString &storageId)
             return;
         }
     }
+}
+
+void GameLauncherProvider::deduplicateGames()
+{
+    // Build a set of names from Steam entries (case-insensitive).
+    QSet<QString> steamNames;
+    for (const auto &g : std::as_const(m_allGames)) {
+        if (g.source == QLatin1String("steam")) {
+            steamNames.insert(g.name.toLower());
+        }
+    }
+
+    // Remove desktop entries whose name matches a Steam entry.
+    m_allGames.erase(std::remove_if(m_allGames.begin(),
+                                    m_allGames.end(),
+                                    [&steamNames](const GameEntry &g) {
+                                        return g.source == QLatin1String("desktop") && steamNames.contains(g.name.toLower());
+                                    }),
+                     m_allGames.end());
 }
 
 // --- XDG .desktop games ---
