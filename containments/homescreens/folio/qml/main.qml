@@ -107,6 +107,18 @@ ContainmentItem {
         screenGeometry: Plasmoid.containment.screenGeometry
     }
 
+    // In gaming mode, reopen Game Center when the last window goes away
+    // so the user is never stranded on a bare wallpaper.
+    Connections {
+        target: windowMaximizedTracker
+        enabled: ShellSettings.Settings.gamingModeEnabled
+        function onShowingWindowChanged() {
+            if (!windowMaximizedTracker.showingWindow && !root.gameCenterOpen) {
+                root.gameCenterOpen = true
+            }
+        }
+    }
+
     // Close app drawer when a new window appears
     Connections {
         target: WindowPlugin.WindowUtil

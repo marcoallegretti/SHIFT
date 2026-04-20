@@ -77,7 +77,7 @@ Window {
                 }
                 break
             case GamingShell.GamepadManager.ButtonDPadDown:
-                if (taskList.activeFocus || runningGames.activeFocus) {
+                if (runningGames.activeFocus) {
                     grid.forceActiveFocus()
                 } else if (grid.activeFocus) {
                     grid.moveCurrentIndexDown()
@@ -93,8 +93,6 @@ Window {
                 if (grid.activeFocus && grid.currentItem) {
                     GamingShell.GameLauncherProvider.launch(grid.currentIndex)
                     root.gameStarted()
-                } else if (taskList.activeFocus && taskList.currentItem) {
-                    taskList.currentItem.activate()
                 }
                 break
             case GamingShell.GamepadManager.ButtonB:
@@ -338,7 +336,6 @@ Window {
                                    ? Kirigami.Theme.highlightColor
                                    : (parent.hovered ? Kirigami.Theme.hoverColor : "transparent")
                             radius: Kirigami.Units.cornerRadius
-                            Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
                         }
 
                         contentItem: Item {
@@ -348,26 +345,19 @@ Window {
                                 spacing: 0
                                 visible: hasArt
 
-                                Image {
+                                Rectangle {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    source: hasArt ? "file://" + artwork : ""
-                                    fillMode: Image.PreserveAspectCrop
-                                    smooth: true
-                                    asynchronous: true
+                                    radius: Kirigami.Units.cornerRadius
+                                    clip: true
+                                    color: "transparent"
 
-                                    // Rounded top corners via layer
-                                    layer.enabled: true
-                                    layer.effect: Item {
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            radius: Kirigami.Units.cornerRadius
-                                        }
-                                    }
-
-                                    scale: parent.parent.parent.isCurrent ? 1.03 : 1.0
-                                    Behavior on scale {
-                                        NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+                                    Image {
+                                        anchors.fill: parent
+                                        source: hasArt ? "file://" + artwork : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        smooth: true
+                                        asynchronous: true
                                     }
                                 }
 
