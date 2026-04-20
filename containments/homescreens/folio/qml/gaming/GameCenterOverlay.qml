@@ -100,8 +100,15 @@ Window {
                 if (grid.activeFocus) grid.moveCurrentIndexRight()
                 break
             case GamingShell.GamepadManager.ButtonA:
-                if (grid.activeFocus && grid.currentItem) {
+                if (runningGames.activeFocus) {
+                    runningGames.activateCurrent()
+                } else if (grid.activeFocus && grid.currentItem) {
                     root.launchGame(grid.currentIndex)
+                }
+                break
+            case GamingShell.GamepadManager.ButtonX:
+                if (runningGames.activeFocus) {
+                    runningGames.closeCurrent()
                 }
                 break
             case GamingShell.GamepadManager.ButtonB:
@@ -388,6 +395,19 @@ Window {
                 highlightMoveDuration: 0
                 highlight: null
 
+                Kirigami.PlaceholderMessage {
+                    anchors.centerIn: parent
+                    width: parent.width - Kirigami.Units.gridUnit * 4
+                    visible: grid.count === 0 && !GamingShell.GameLauncherProvider.loading
+                    icon.name: "games-none"
+                    text: searchField.text.length > 0
+                          ? i18n("No games match your search")
+                          : i18n("No games found")
+                    explanation: searchField.text.length > 0
+                                 ? ""
+                                 : i18n("Install games or check that they have the Game category in their .desktop file")
+                }
+
                 onActiveFocusChanged: {
                     if (activeFocus && count > 0 && currentIndex < 0) {
                         currentIndex = 0
@@ -567,7 +587,9 @@ Window {
 
                 // Gamepad legend
                 PC3.Label {
-                    text: i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
+                    text: runningGames.hasTasks
+                          ? i18n("A: Select  X: Close  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
+                          : i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ☰: Search")
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }

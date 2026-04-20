@@ -29,6 +29,19 @@ Item {
         taskList.forceActiveFocus()
     }
 
+    function activateCurrent() {
+        if (taskList.currentItem) {
+            taskList.currentItem.activate()
+        }
+    }
+
+    function closeCurrent() {
+        if (taskList.currentItem) {
+            var idx = taskList.currentIndex
+            tasks.requestClose(tasks.makeModelIndex(idx))
+        }
+    }
+
     TaskManager.VirtualDesktopInfo { id: vdInfo }
     TaskManager.ActivityInfo    { id: actInfo }
 
