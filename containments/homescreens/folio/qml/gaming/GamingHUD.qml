@@ -7,6 +7,7 @@ import QtQuick.Window
 
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+import org.kde.plasma.private.mobileshell.gamingshellplugin as GamingShell
 import org.kde.layershell 1.0 as LayerShell
 
 Window {
@@ -43,14 +44,31 @@ Window {
         radius: height / 2
         color: Qt.rgba(0, 0, 0, 0.55)
 
-        QQC2.ToolButton {
+        Row {
             anchors.centerIn: parent
-            icon.name: "input-gaming"
-            icon.color: "white"
-            display: QQC2.AbstractButton.IconOnly
-            QQC2.ToolTip.visible: hovered
-            QQC2.ToolTip.text: i18n("Game Center")
-            onClicked: root.openRequested()
+            spacing: Kirigami.Units.smallSpacing
+
+            QQC2.ToolButton {
+                icon.name: "input-gaming"
+                icon.color: "white"
+                display: QQC2.AbstractButton.IconOnly
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: i18n("Game Center")
+                onClicked: root.openRequested()
+            }
+
+            // Show primary gamepad battery when connected
+            QQC2.Label {
+                visible: GamingShell.GamepadManager.hasGamepad
+                         && GamingShell.GamepadManager.primaryGamepad
+                         && GamingShell.GamepadManager.primaryGamepad.batteryPercent >= 0
+                text: GamingShell.GamepadManager.primaryGamepad
+                      ? GamingShell.GamepadManager.primaryGamepad.batteryPercent + "%"
+                      : ""
+                color: "white"
+                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
     }
 }

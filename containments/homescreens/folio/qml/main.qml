@@ -16,6 +16,7 @@ import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
 import org.kde.plasma.private.mobileshell.windowplugin as WindowPlugin
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+import org.kde.plasma.private.mobileshell.gamingshellplugin as GamingShell
 
 import org.kde.layershell 1.0 as LayerShell
 import org.kde.plasma.private.sessions 2.0
@@ -49,11 +50,24 @@ ContainmentItem {
         target: ShellSettings.Settings
         function onGamingModeEnabledChanged() {
             root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
+            GamingShell.GamepadManager.active = ShellSettings.Settings.gamingModeEnabled
+        }
+    }
+
+    // Gamepad Guide button toggles Game Center overlay
+    Connections {
+        target: GamingShell.GamepadManager
+        enabled: ShellSettings.Settings.gamingModeEnabled
+        function onButtonPressed(button, gamepadIndex) {
+            if (button === GamingShell.GamepadManager.ButtonGuide) {
+                root.gameCenterOpen = !root.gameCenterOpen
+            }
         }
     }
 
     Component.onCompleted: {
         root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
+        GamingShell.GamepadManager.active = ShellSettings.Settings.gamingModeEnabled
         folio.FolioSettings.load();
         folio.FavouritesModel.load();
         folio.PageListModel.load();
@@ -688,12 +702,6 @@ ContainmentItem {
             if (ShellSettings.Settings.gamingDismissHintEnabled) {
                 root.showGameCenterHint = true
                 gameCenterHintTimer.restart()
-            }
-        }
-
-        onVisibleChanged: {
-            if (!visible) {
-                folio.ApplicationListSearchModel.categoryFilter = ""
             }
         }
     }

@@ -112,6 +112,7 @@ set_package_properties(PlasmaWaylandProtocols PROPERTIES
 
 find_package(LibKWorkspace CONFIG REQUIRED)
 find_package(Libudev REQUIRED)
+find_package(SDL3 REQUIRED)
 
 find_package(KWinDBusInterface)
 set_package_properties(KWinDBusInterface PROPERTIES DESCRIPTION "KWin DBus interface"
