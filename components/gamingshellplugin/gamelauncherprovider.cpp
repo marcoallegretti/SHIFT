@@ -112,14 +112,31 @@ void GameLauncherProvider::launch(int index)
     if (index < 0 || index >= m_games.size()) {
         return;
     }
-    const auto &g = m_games.at(index);
+    // Find the matching entry in m_allGames so the timestamp update persists
+    const QString &sid = m_games.at(index).storageId;
+    for (auto &entry : m_allGames) {
+        if (entry.storageId == sid) {
+            launchEntry(entry);
+            return;
+        }
+    }
+}
 
-    if (g.source == QLatin1String("desktop")) {
-        // Launch via KService for proper activation tracking
-        auto service = KService::serviceByStorageId(g.storageId);
+void GameLauncherProvider::launchByStorageId(const QString &storageId)
+{
+    for (auto &entry : m_allGames) {
+        if (entry.storageId == storageId) {
+            launchEntry(entry);
+            return;
+        }
+    }
+}
+
+void GameLauncherProvider::launchEntry(GameEntry &entry)
+{
+    if (entry.source == QLatin1String("desktop")) {
+        auto service = KService::serviceByStorageId(entry.storageId);
         if (service) {
-            // Use QProcess to launch the exec line — KIO::ApplicationLauncherJob
-            // would be better but requires KIOWidgets which is heavy for a plugin.
             QStringList args = KShell::splitArgs(service->exec());
             if (!args.isEmpty()) {
                 QString program = args.takeFirst();
@@ -127,63 +144,17 @@ void GameLauncherProvider::launch(int index)
             }
         }
     } else {
-        // Steam, Flatpak, etc. — run the launch command directly
-        QStringList parts = g.launchCommand.split(QLatin1Char(' '));
+        QStringList parts = entry.launchCommand.split(QLatin1Char(' '));
         if (!parts.isEmpty()) {
             QString program = parts.takeFirst();
             QProcess::startDetached(program, parts);
         }
     }
 
-    Q_EMIT gameLaunched(g.name);
-
-    // Record timestamp for "recently played"
-    saveRecentTimestamp(g.storageId, QDateTime::currentDateTime());
-
-    // Update the in-memory entry so recentGames() picks it up immediately
-    for (auto &entry : m_allGames) {
-        if (entry.storageId == g.storageId) {
-            entry.lastPlayed = QDateTime::currentDateTime();
-            break;
-        }
-    }
-}
-
-void GameLauncherProvider::launchByStorageId(const QString &storageId)
-{
-    for (int i = 0; i < m_allGames.size(); ++i) {
-        if (m_allGames.at(i).storageId == storageId) {
-            // Find the index in the filtered model, or launch from allGames directly
-            for (int j = 0; j < m_games.size(); ++j) {
-                if (m_games.at(j).storageId == storageId) {
-                    launch(j);
-                    return;
-                }
-            }
-            // Not in filtered view — launch directly from allGames
-            const auto &g = m_allGames.at(i);
-            if (g.source == QLatin1String("desktop")) {
-                auto service = KService::serviceByStorageId(g.storageId);
-                if (service) {
-                    QStringList args = KShell::splitArgs(service->exec());
-                    if (!args.isEmpty()) {
-                        QString program = args.takeFirst();
-                        QProcess::startDetached(program, args);
-                    }
-                }
-            } else {
-                QStringList parts = g.launchCommand.split(QLatin1Char(' '));
-                if (!parts.isEmpty()) {
-                    QString program = parts.takeFirst();
-                    QProcess::startDetached(program, parts);
-                }
-            }
-            Q_EMIT gameLaunched(g.name);
-            saveRecentTimestamp(g.storageId, QDateTime::currentDateTime());
-            m_allGames[i].lastPlayed = QDateTime::currentDateTime();
-            return;
-        }
-    }
+    Q_EMIT gameLaunched(entry.name);
+    const auto now = QDateTime::currentDateTime();
+    saveRecentTimestamp(entry.storageId, now);
+    entry.lastPlayed = now;
 }
 
 void GameLauncherProvider::deduplicateGames()

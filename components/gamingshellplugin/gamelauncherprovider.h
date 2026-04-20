@@ -78,6 +78,7 @@ private:
     void loadRecentTimestamps();
     void saveRecentTimestamp(const QString &storageId, const QDateTime &when);
     void applyFilter();
+    void launchEntry(GameEntry &entry);
 
     QList<GameEntry> m_allGames;
     QList<GameEntry> m_games; // filtered view
