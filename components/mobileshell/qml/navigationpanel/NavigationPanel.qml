@@ -165,6 +165,7 @@ Item {
                 shrinkSize: 0
 
                 onClicked: {
+                    if (!root.taskModel) return;
                     root.taskModel.requestActivate(root.taskModel.makeModelIndex(taskDelegate.index));
                 }
 
@@ -180,18 +181,27 @@ Item {
                     Controls.MenuItem {
                         text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
                         icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
-                        onTriggered: root.taskModel.requestToggleMinimized(root.taskModel.makeModelIndex(taskDelegate.index))
+                        onTriggered: {
+                            if (!root.taskModel) return;
+                            root.taskModel.requestToggleMinimized(root.taskModel.makeModelIndex(taskDelegate.index))
+                        }
                     }
                     Controls.MenuItem {
                         text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
                         icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
-                        onTriggered: root.taskModel.requestToggleMaximized(root.taskModel.makeModelIndex(taskDelegate.index))
+                        onTriggered: {
+                            if (!root.taskModel) return;
+                            root.taskModel.requestToggleMaximized(root.taskModel.makeModelIndex(taskDelegate.index))
+                        }
                     }
                     Controls.MenuSeparator {}
                     Controls.MenuItem {
                         text: i18n("Close")
                         icon.name: "window-close"
-                        onTriggered: root.taskModel.requestClose(root.taskModel.makeModelIndex(taskDelegate.index))
+                        onTriggered: {
+                            if (!root.taskModel) return;
+                            root.taskModel.requestClose(root.taskModel.makeModelIndex(taskDelegate.index))
+                        }
                     }
                 }
 

@@ -18,7 +18,6 @@ QS.QuickSetting {
 
     function requestDisable() {
         confirmDisableDialog.active = true;
-        confirmDisableDialog.item.open();
     }
 
     function toggle() {
@@ -33,6 +32,7 @@ QS.QuickSetting {
     Loader {
         id: confirmDisableDialog
         active: false
+        onLoaded: item.open()
 
         sourceComponent: Kirigami.PromptDialog {
             id: theConfirmDialog
@@ -46,7 +46,10 @@ QS.QuickSetting {
                 },
                 Kirigami.Action {
                     text: i18n("Leave")
-                    onTriggered: ShellSettings.Settings.gamingModeEnabled = false
+                    onTriggered: {
+                        ShellSettings.Settings.gamingModeEnabled = false
+                        theConfirmDialog.close()
+                    }
                 }
             ]
             onClosed: confirmDisableDialog.active = false

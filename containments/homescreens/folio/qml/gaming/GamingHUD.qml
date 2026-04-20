@@ -14,8 +14,11 @@ Window {
 
     signal openRequested()
 
-    width: Kirigami.Units.gridUnit * 4
-    height: Kirigami.Units.gridUnit * 2
+    // Guard against startup timing where Kirigami units may briefly be 0/NaN.
+    // LayerShell surfaces must never be committed with zero size.
+    readonly property real safeGridUnit: ((Kirigami.Units.gridUnit || 0) > 0) ? Kirigami.Units.gridUnit : 16
+    width: safeGridUnit * 4
+    height: safeGridUnit * 2
     color: "transparent"
     flags: Qt.FramelessWindowHint
 
@@ -25,7 +28,11 @@ Window {
     LayerShell.Window.exclusionZone: 0
     LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
 
-    opacity: visible ? 1 : 0
+    // Driven by the Loader in folio/qml/main.qml — set false to fade out
+    // before the Loader destroys the window.
+    property bool showing: true
+
+    opacity: showing ? 1 : 0
     Behavior on opacity {
         NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
     }

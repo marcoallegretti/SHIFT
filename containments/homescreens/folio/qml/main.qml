@@ -34,8 +34,9 @@ ContainmentItem {
     property Folio.HomeScreen folio: root.plasmoid
 
     // Tracks whether the Game Center grid is visible within gaming mode.
-    // Starts true when gaming mode turns on; set to false by a game launch.
-    property bool gameCenterOpen: false
+    // If gaming mode is already enabled at startup, open it immediately so
+    // the user is never left without controls.
+    property bool gameCenterOpen: ShellSettings.Settings.gamingModeEnabled
     property bool showGameCenterHint: false
 
     Timer {
@@ -52,6 +53,7 @@ ContainmentItem {
     }
 
     Component.onCompleted: {
+        root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
         folio.FolioSettings.load();
         folio.FavouritesModel.load();
         folio.PageListModel.load();
@@ -698,12 +700,13 @@ ContainmentItem {
 
     // Small persistent button at the top-right corner of the screen that lets
     // the user return to the Game Center after launching a game.
-    // Wrapped in a Loader so the LayerShell Window is destroyed (not merely
-    // hidden) when not needed — hiding a LayerShell window with AnchorTop|Right
-    // but no fixed height causes a Wayland protocol error (height=0).
+    // Keep the Loader active for the full duration of gaming mode so the
+    // opacity Behavior in GamingHUD can animate both fade-in and fade-out.
     Loader {
-        active: ShellSettings.Settings.gamingModeEnabled && !root.gameCenterOpen
+        active: ShellSettings.Settings.gamingModeEnabled
         sourceComponent: GamingHUD {
+            visible: showing
+            showing: !root.gameCenterOpen
             onOpenRequested: root.gameCenterOpen = true
         }
     }

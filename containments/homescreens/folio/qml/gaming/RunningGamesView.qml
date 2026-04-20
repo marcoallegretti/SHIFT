@@ -181,6 +181,7 @@ Item {
                     id: resumeArea
                     anchors.fill: parent
                     hoverEnabled: true
+                    z: -1
                     // Leave room for the close button
                     onClicked: {
                         taskList.currentIndex = index

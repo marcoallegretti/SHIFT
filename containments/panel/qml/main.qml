@@ -132,7 +132,7 @@ ContainmentItem {
 
         function onGamingModeEnabledChanged() {
             root.setWindowProperties();
-            MobileShellState.ShellDBusClient.panelState = ShellSettings.Settings.gamingModeEnabled ? "hidden" : "default";
+            MobileShellState.ShellDBusClient.panelState = ShellSettings.Settings.gamingModeEnabled ? "hidden" : (fullscreen ? "hidden" : "default");
         }
     }
 
@@ -150,13 +150,13 @@ ContainmentItem {
         visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
-        height: root.panelHeight
+        height: Math.max(1, root.panelHeight)
         width: 1
 
         LayerShell.Window.scope: "topbar-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: root.panelHeight
+        LayerShell.Window.exclusionZone: Math.max(1, root.panelHeight)
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 

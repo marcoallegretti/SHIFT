@@ -706,12 +706,16 @@ MouseArea {
         x: {
             if (!targetDelegate) return 0
             var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            return Math.max(0, Math.min(Screen.width - width, delegateGlobal.x + (targetDelegate.width - width) / 2))
+            var win = targetDelegate.Window.window
+            var scrW = win && win.screen ? win.screen.width : Screen.width
+            return Math.max(0, Math.min(scrW - width, delegateGlobal.x + (targetDelegate.width - width) / 2))
         }
         y: {
             if (!targetDelegate) return 0
             var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            return Math.max(0, Math.min(Screen.height - height, delegateGlobal.y - height - Kirigami.Units.smallSpacing))
+            var win = targetDelegate.Window.window
+            var scrH = win && win.screen ? win.screen.height : Screen.height
+            return Math.max(0, Math.min(scrH - height, delegateGlobal.y - height - Kirigami.Units.smallSpacing))
         }
 
         onShowingChanged: {

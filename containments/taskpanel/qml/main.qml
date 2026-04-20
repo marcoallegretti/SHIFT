@@ -141,7 +141,7 @@ ContainmentItem {
 
         function onGamingModeEnabledChanged() {
             root.setWindowProperties();
-            navigationPanel.offset = ShellSettings.Settings.gamingModeEnabled ? root.navigationPanelHeight : 0;
+            navigationPanel.offset = ShellSettings.Settings.gamingModeEnabled ? MobileShell.Constants.navigationPanelThickness : 0;
         }
     }
 
@@ -166,13 +166,13 @@ ContainmentItem {
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
         // height is set by layer-shell anchoring; provide a fallback.
-        height: Kirigami.Units.gridUnit * 3
+        height: Math.max(1, MobileShell.Constants.navigationPanelThickness)
         width: 1 // layer-shell stretches it via AnchorLeft|AnchorRight
 
         LayerShell.Window.scope: "dock-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
+        LayerShell.Window.exclusionZone: Math.max(1, MobileShell.Constants.navigationPanelThickness)
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 

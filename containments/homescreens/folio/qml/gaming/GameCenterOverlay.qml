@@ -94,6 +94,7 @@ Window {
                     text: i18n("Exit Gaming Mode")
                     display: QQC2.AbstractButton.TextBesideIcon
                     Keys.onReturnPressed: clicked()
+                    Keys.onEnterPressed: clicked()
                     onClicked: root.requestExitGamingMode()
                 }
             }
@@ -183,7 +184,10 @@ Window {
                 },
                 Kirigami.Action {
                     text: i18n("Leave")
-                    onTriggered: ShellSettings.Settings.gamingModeEnabled = false
+                    onTriggered: {
+                        ShellSettings.Settings.gamingModeEnabled = false
+                        theExitDialog.close()
+                    }
                 }
             ]
             onClosed: exitGamingDialog.active = false

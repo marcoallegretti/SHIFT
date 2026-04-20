@@ -27,7 +27,7 @@ QQC2.ItemDelegate {
 
     onClicked: {
         if (!application) return
-        if (application.icon !== "" && !application.running) {
+        if (application.icon && typeof application.icon === "string" && application.icon.length > 0 && !application.running) {
             MobileShellState.ShellDBusClient.openAppLaunchAnimationWithPosition(
                 Plasmoid.screen,
                 application.icon,
