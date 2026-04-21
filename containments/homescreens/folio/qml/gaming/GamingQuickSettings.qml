@@ -9,10 +9,13 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.gamingshellplugin as GamingShell
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.plasma.private.mobileshell.screenbrightnessplugin as ScreenBrightness
 import org.kde.plasma.private.volume
 import org.kde.plasma.networkmanagement as PlasmaNM
 import org.kde.bluezqt 1.0 as BluezQt
+import org.kde.plasma.private.mobileshell.state as MobileShellState
+import org.kde.plasma.quicksetting.nightcolor as NightColor
 
 Item {
     id: root
@@ -26,8 +29,13 @@ Item {
 
     function _buildControlsList() {
         var list = []
+        if (GamingShell.PowerProfileControl.available && performanceSection._availableProfiles.length > 0) list.push(profileRow)
         if (screenBrightness.brightnessAvailable) list.push(brightnessSlider)
         if (PreferredDevice.sink) list.push(volumeSlider)
+        list.push(dndSwitch)
+        list.push(launchHintSwitch)
+        list.push(nightColorSwitch)
+        list.push(overlaySwitch)
         list.push(wifiSwitch)
         list.push(btSwitch)
         list.push(airplaneSwitch)
@@ -37,7 +45,7 @@ Item {
     function open() {
         opened = true
         _buildControlsList()
-        _focusIndex = 0
+        _focusIndex = Math.max(0, Math.min(_focusIndex, _controls.length - 1))
         _highlightCurrent()
     }
     function close() {
@@ -68,23 +76,35 @@ Item {
     }
     function gamepadLeft() {
         var ctrl = _controls[_focusIndex]
-        if (ctrl instanceof PC3.Slider) {
+        if (typeof ctrl.decrease === "function") {
             ctrl.decrease()
-            ctrl.moved()
+            if (typeof ctrl.moved === "function") ctrl.moved()
         }
     }
     function gamepadRight() {
         var ctrl = _controls[_focusIndex]
-        if (ctrl instanceof PC3.Slider) {
+        if (typeof ctrl.increase === "function") {
             ctrl.increase()
-            ctrl.moved()
+            if (typeof ctrl.moved === "function") ctrl.moved()
         }
     }
     function gamepadAccept() {
         var ctrl = _controls[_focusIndex]
+        if (ctrl === profileRow) {
+            ctrl.increase()
+            return
+        }
         if (ctrl instanceof QQC2.Switch) {
             ctrl.toggle()
             ctrl.toggled()
+        }
+    }
+
+    onOpenedChanged: {
+        if (opened) {
+            _buildControlsList()
+            _focusIndex = Math.max(0, Math.min(_focusIndex, _controls.length - 1))
+            _highlightCurrent()
         }
     }
 
@@ -176,6 +196,96 @@ Item {
 
                 Kirigami.Separator { Layout.fillWidth: true }
 
+                // ---- Performance Profile ----
+                ColumnLayout {
+                    id: performanceSection
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing
+                    visible: GamingShell.PowerProfileControl.available
+                             && _availableProfiles.length > 0
+
+                    PC3.Label {
+                        text: i18n("Performance")
+                        font.bold: true
+                    }
+
+                    // Ordered low-to-high so gamepad left=slower, right=faster
+                    readonly property var _profileOrder: ["power-saver", "balanced", "performance"]
+                    readonly property var _availableProfiles: {
+                        var ordered = []
+                        for (var i = 0; i < _profileOrder.length; i++) {
+                            if (GamingShell.PowerProfileControl.profiles.indexOf(_profileOrder[i]) >= 0) {
+                                ordered.push(_profileOrder[i])
+                            }
+                        }
+                        return ordered
+                    }
+
+                    Item {
+                        id: profileRow
+                        focus: true
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: profileButtons.implicitHeight
+
+                        function decrease() {
+                            var profiles = parent._availableProfiles
+                            var idx = profiles.indexOf(GamingShell.PowerProfileControl.activeProfile)
+                            if (idx > 0) {
+                                GamingShell.PowerProfileControl.activeProfile = profiles[idx - 1]
+                            }
+                        }
+                        function increase() {
+                            var profiles = parent._availableProfiles
+                            var idx = profiles.indexOf(GamingShell.PowerProfileControl.activeProfile)
+                            if (idx >= 0 && idx < profiles.length - 1) {
+                                GamingShell.PowerProfileControl.activeProfile = profiles[idx + 1]
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -Kirigami.Units.smallSpacing
+                            radius: Kirigami.Units.smallSpacing
+                            color: "transparent"
+                            border.color: Kirigami.Theme.highlightColor
+                            border.width: parent.activeFocus ? 2 : 0
+                        }
+
+                        RowLayout {
+                            id: profileButtons
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Repeater {
+                                model: performanceSection._availableProfiles
+
+                                QQC2.Button {
+                                    Layout.fillWidth: true
+                                    text: {
+                                        switch (modelData) {
+                                        case "performance": return i18n("Performance")
+                                        case "balanced": return i18n("Balanced")
+                                        case "power-saver": return i18n("Power Saver")
+                                        default: return modelData
+                                        }
+                                    }
+                                    icon.name: {
+                                        switch (modelData) {
+                                        case "performance": return "speedometer"
+                                        case "balanced": return "system-suspend-hibernate"
+                                        case "power-saver": return "battery-profile-powersave"
+                                        default: return ""
+                                        }
+                                    }
+                                    highlighted: GamingShell.PowerProfileControl.activeProfile === modelData
+                                    onClicked: GamingShell.PowerProfileControl.activeProfile = modelData
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // ---- Brightness ----
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -213,14 +323,42 @@ Item {
                                 onTriggered: brightnessSlider.value = Qt.binding(() => screenBrightness.brightness)
                             }
 
-                            // Focus highlight
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: -Kirigami.Units.smallSpacing
-                                radius: Kirigami.Units.smallSpacing
-                                color: "transparent"
-                                border.color: Kirigami.Theme.highlightColor
-                                border.width: parent.activeFocus ? 2 : 0
+                            // Keep Plasma/Kirigami colors while using a cleaner rounded style.
+                            background: Rectangle {
+                                x: brightnessSlider.leftPadding
+                                y: brightnessSlider.topPadding + brightnessSlider.availableHeight / 2 - height / 2
+                                width: brightnessSlider.availableWidth
+                                height: Kirigami.Units.smallSpacing + 2
+                                radius: height / 2
+                                color: Kirigami.Theme.alternateBackgroundColor
+
+                                Rectangle {
+                                    width: parent.width * brightnessSlider.visualPosition
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: Kirigami.Theme.highlightColor
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: parent.radius
+                                    color: "transparent"
+                                    border.color: Kirigami.Theme.highlightColor
+                                    border.width: brightnessSlider.activeFocus ? 1 : 0
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: brightnessSlider.leftPadding + brightnessSlider.visualPosition * (brightnessSlider.availableWidth - width)
+                                y: brightnessSlider.topPadding + brightnessSlider.availableHeight / 2 - height / 2
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: Kirigami.Units.iconSizes.small
+                                radius: width / 2
+                                color: Kirigami.Theme.backgroundColor
+                                border.color: brightnessSlider.pressed
+                                              ? Kirigami.Theme.highlightColor
+                                              : Kirigami.Theme.disabledTextColor
+                                border.width: brightnessSlider.activeFocus || brightnessSlider.pressed ? 2 : 1
                             }
                         }
 
@@ -267,14 +405,42 @@ Item {
                                 }
                             }
 
-                            // Focus highlight
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: -Kirigami.Units.smallSpacing
-                                radius: Kirigami.Units.smallSpacing
-                                color: "transparent"
-                                border.color: Kirigami.Theme.highlightColor
-                                border.width: parent.activeFocus ? 2 : 0
+                            // Keep Plasma/Kirigami colors while using a cleaner rounded style.
+                            background: Rectangle {
+                                x: volumeSlider.leftPadding
+                                y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                width: volumeSlider.availableWidth
+                                height: Kirigami.Units.smallSpacing + 2
+                                radius: height / 2
+                                color: Kirigami.Theme.alternateBackgroundColor
+
+                                Rectangle {
+                                    width: parent.width * volumeSlider.visualPosition
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: Kirigami.Theme.highlightColor
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: parent.radius
+                                    color: "transparent"
+                                    border.color: Kirigami.Theme.highlightColor
+                                    border.width: volumeSlider.activeFocus ? 1 : 0
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                                y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: Kirigami.Units.iconSizes.small
+                                radius: width / 2
+                                color: Kirigami.Theme.backgroundColor
+                                border.color: volumeSlider.pressed
+                                              ? Kirigami.Theme.highlightColor
+                                              : Kirigami.Theme.disabledTextColor
+                                border.width: volumeSlider.activeFocus || volumeSlider.pressed ? 2 : 1
                             }
                         }
 
@@ -282,6 +448,67 @@ Item {
                             implicitWidth: Kirigami.Units.iconSizes.smallMedium
                             implicitHeight: Kirigami.Units.iconSizes.smallMedium
                             source: "audio-volume-high"
+                        }
+                    }
+                }
+
+                Kirigami.Separator { Layout.fillWidth: true }
+
+                // ---- Gaming Tweaks ----
+                PC3.Label {
+                    text: i18n("Gaming")
+                    font.bold: true
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    rowSpacing: Kirigami.Units.smallSpacing
+                    columnSpacing: Kirigami.Units.largeSpacing
+
+                    QQC2.Switch {
+                        id: dndSwitch
+                        text: i18n("Do Not Disturb")
+                        checked: MobileShellState.ShellDBusClient.doNotDisturb
+                        onToggled: MobileShellState.ShellDBusClient.doNotDisturb = checked
+                    }
+
+                    QQC2.Switch {
+                        id: launchHintSwitch
+                        text: i18n("Launch Hint")
+                        checked: ShellSettings.Settings.gamingDismissHintEnabled
+                        onToggled: ShellSettings.Settings.gamingDismissHintEnabled = checked
+                    }
+
+                    QQC2.Switch {
+                        id: nightColorSwitch
+                        text: i18n("Night Color")
+                        checked: NightColor.NightColorUtil.enabled
+                        onToggled: NightColor.NightColorUtil.enabled = checked
+                    }
+
+                    QQC2.Switch {
+                        id: overlaySwitch
+                        text: i18n("Perf Overlay")
+                        checked: GamingShell.GameLauncherProvider.overlayEnabled
+                        onToggled: GamingShell.GameLauncherProvider.overlayEnabled = checked
+                    }
+
+                    // GameMode status (auto-managed, read-only indicator)
+                    RowLayout {
+                        spacing: Kirigami.Units.smallSpacing
+                        visible: GamingShell.GameModeControl.available
+
+                        Kirigami.Icon {
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: Kirigami.Units.iconSizes.small
+                            source: "games-achievements"
+                        }
+                        PC3.Label {
+                            text: GamingShell.GameModeControl.active
+                                  ? i18n("GameMode active")
+                                  : i18n("GameMode standby")
+                            opacity: 0.7
                         }
                     }
                 }
