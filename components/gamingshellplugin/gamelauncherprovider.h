@@ -21,6 +21,7 @@ class GameLauncherProvider : public QAbstractListModel
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
     Q_PROPERTY(QString sourceFilter READ sourceFilter WRITE setSourceFilter NOTIFY sourceFilterChanged)
+    Q_PROPERTY(bool overlayEnabled READ overlayEnabled WRITE setOverlayEnabled NOTIFY overlayEnabledChanged)
 
 public:
     explicit GameLauncherProvider(QObject *parent = nullptr);
@@ -46,6 +47,8 @@ public:
     void setFilterString(const QString &filter);
     QString sourceFilter() const;
     void setSourceFilter(const QString &source);
+    bool overlayEnabled() const;
+    void setOverlayEnabled(bool enabled);
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void launch(int index);
@@ -57,6 +60,7 @@ Q_SIGNALS:
     void loadingChanged();
     void filterStringChanged();
     void sourceFilterChanged();
+    void overlayEnabledChanged();
     void gameLaunched(const QString &name);
 
 private:
@@ -88,4 +92,5 @@ private:
     QString m_sourceFilter; // empty = all, or "desktop"/"steam"/"flatpak"
     KSharedConfigPtr m_config;
     bool m_loading = false;
+    bool m_overlayEnabled = false;
 };

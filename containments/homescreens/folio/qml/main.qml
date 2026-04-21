@@ -40,6 +40,44 @@ ContainmentItem {
     property bool gameCenterOpen: ShellSettings.Settings.gamingModeEnabled
     property bool showGameCenterHint: false
 
+    // State saved when gaming mode activates, restored when it deactivates
+    property string _savedPowerProfile: ""
+    property bool _savedDnd: false
+    property bool _gamingSessionActive: false
+
+    function _applyGamingModeState(enabled) {
+        root.gameCenterOpen = enabled
+        GamingShell.GamepadManager.active = enabled
+
+        if (enabled === root._gamingSessionActive) {
+            return
+        }
+
+        if (enabled) {
+            // Save current state and apply gaming optimizations
+            root._savedDnd = MobileShellState.ShellDBusClient.doNotDisturb
+            MobileShellState.ShellDBusClient.doNotDisturb = true
+
+            if (GamingShell.PowerProfileControl.available) {
+                root._savedPowerProfile = GamingShell.PowerProfileControl.activeProfile
+                GamingShell.PowerProfileControl.activeProfile = "performance"
+            }
+
+            GamingShell.GameModeControl.requestStart()
+            root._gamingSessionActive = true
+        } else {
+            // Restore previous state
+            MobileShellState.ShellDBusClient.doNotDisturb = root._savedDnd
+
+            if (GamingShell.PowerProfileControl.available && root._savedPowerProfile.length > 0) {
+                GamingShell.PowerProfileControl.activeProfile = root._savedPowerProfile
+            }
+
+            GamingShell.GameModeControl.requestEnd()
+            root._gamingSessionActive = false
+        }
+    }
+
     Timer {
         id: gameCenterHintTimer
         interval: 2600
@@ -49,8 +87,7 @@ ContainmentItem {
     Connections {
         target: ShellSettings.Settings
         function onGamingModeEnabledChanged() {
-            root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
-            GamingShell.GamepadManager.active = ShellSettings.Settings.gamingModeEnabled
+            root._applyGamingModeState(ShellSettings.Settings.gamingModeEnabled)
         }
     }
 
@@ -66,8 +103,7 @@ ContainmentItem {
     }
 
     Component.onCompleted: {
-        root.gameCenterOpen = ShellSettings.Settings.gamingModeEnabled
-        GamingShell.GamepadManager.active = ShellSettings.Settings.gamingModeEnabled
+        root._applyGamingModeState(ShellSettings.Settings.gamingModeEnabled)
         folio.FolioSettings.load();
         folio.FavouritesModel.load();
         folio.PageListModel.load();

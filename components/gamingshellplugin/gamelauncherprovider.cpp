@@ -533,6 +533,29 @@ void GameLauncherProvider::setSourceFilter(const QString &source)
     applyFilter();
 }
 
+bool GameLauncherProvider::overlayEnabled() const
+{
+    return m_overlayEnabled;
+}
+
+void GameLauncherProvider::setOverlayEnabled(bool enabled)
+{
+    if (m_overlayEnabled == enabled) {
+        return;
+    }
+    m_overlayEnabled = enabled;
+    Q_EMIT overlayEnabledChanged();
+
+    // Set/unset MangoHud environment variables for child processes
+    if (enabled) {
+        qputenv("MANGOHUD", "1");
+        qputenv("MANGOHUD_DLSYM", "1");
+    } else {
+        qunsetenv("MANGOHUD");
+        qunsetenv("MANGOHUD_DLSYM");
+    }
+}
+
 void GameLauncherProvider::applyFilter()
 {
     beginResetModel();
