@@ -26,17 +26,37 @@ Window {
     signal gameStarted()
     signal dismissRequested()
 
+    readonly property string actionButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonA)
+    readonly property string backButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonB)
+    readonly property string closeButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonX)
+    readonly property string exitButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonY)
+    readonly property string leftShoulderLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonLeftShoulder)
+    readonly property string rightShoulderLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonRightShoulder)
+    readonly property string quickSettingsButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonBack)
+    readonly property string searchButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonStart)
+
+    function pulsePrimaryGamepad(lowIntensity, highIntensity, durationMs) {
+        var pad = GamingShell.GamepadManager.primaryGamepad
+        if (!pad || !pad.hasRumble) {
+            return
+        }
+        pad.rumble(lowIntensity, highIntensity, durationMs)
+    }
+
     function requestExitGamingMode() {
+        pulsePrimaryGamepad(9000, 15000, 60)
         exitGamingDialog.active = true
         exitGamingDialog.item.open()
     }
 
     function launchGame(index) {
+        pulsePrimaryGamepad(14000, 22000, 80)
         GamingShell.GameLauncherProvider.launch(index)
         launchFade.restart()
     }
 
     function launchGameByStorageId(storageId) {
+        pulsePrimaryGamepad(14000, 22000, 80)
         GamingShell.GameLauncherProvider.launchByStorageId(storageId)
         launchFade.restart()
     }
@@ -160,6 +180,7 @@ Window {
                 break
             case GamingShell.GamepadManager.ButtonBack:
                 quickSettings.toggle()
+                pulsePrimaryGamepad(7000, 11000, 40)
                 break
             }
         }
@@ -677,6 +698,7 @@ Window {
                         required property string name
                         required property int battery
                         required property string type
+                        required property var device
 
                         PC3.Label {
                             text: name
@@ -688,6 +710,18 @@ Window {
                             font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
                             opacity: 0.7
                         }
+                        PC3.Label {
+                            text: device.touchpadCount > 0 ? i18n("Touchpad") : ""
+                            visible: device.touchpadCount > 0
+                            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                            opacity: 0.6
+                        }
+                        PC3.Label {
+                            text: device.hasGyro ? i18n("Gyro") : ""
+                            visible: device.hasGyro
+                            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                            opacity: 0.6
+                        }
                     }
                 }
 
@@ -696,8 +730,12 @@ Window {
                 // Gamepad legend
                 PC3.Label {
                     text: runningGames.hasTasks
-                          ? i18n("A: Select  X: Close  B: Back  Y: Exit  ⊞: Settings  ☰: Search")
-                          : i18n("A: Select  B: Back  Y: Exit  LB/RB: Filter  ⊞: Settings  ☰: Search")
+                         ? i18n("%1: Select  %2: Close  %3: Back  %4: Exit  %5: Settings  %6: Search",
+                             actionButtonLabel, closeButtonLabel, backButtonLabel, exitButtonLabel,
+                             quickSettingsButtonLabel, searchButtonLabel)
+                         : i18n("%1: Select  %2: Back  %3: Exit  %4/%5: Filter  %6: Settings  %7: Search",
+                             actionButtonLabel, backButtonLabel, exitButtonLabel, leftShoulderLabel,
+                             rightShoulderLabel, quickSettingsButtonLabel, searchButtonLabel)
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }

@@ -22,6 +22,16 @@ Item {
     anchors.fill: parent
 
     property bool opened: false
+    readonly property string acceptButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonA)
+    readonly property string closeButtonLabel: GamingShell.GamepadManager.buttonLabel(GamingShell.GamepadManager.ButtonB)
+
+    function pulsePrimaryGamepad(lowIntensity, highIntensity, durationMs) {
+        var pad = GamingShell.GamepadManager.primaryGamepad
+        if (!pad || !pad.hasRumble) {
+            return
+        }
+        pad.rumble(lowIntensity, highIntensity, durationMs)
+    }
 
     // Focusable controls for gamepad navigation
     property var _controls: []
@@ -47,9 +57,11 @@ Item {
         _buildControlsList()
         _focusIndex = Math.max(0, Math.min(_focusIndex, _controls.length - 1))
         _highlightCurrent()
+        pulsePrimaryGamepad(7000, 11000, 40)
     }
     function close() {
         opened = false
+        pulsePrimaryGamepad(5000, 8000, 30)
     }
     function toggle() {
         if (opened) close(); else open()
@@ -92,11 +104,13 @@ Item {
         var ctrl = _controls[_focusIndex]
         if (ctrl === profileRow) {
             ctrl.increase()
+            pulsePrimaryGamepad(6000, 9000, 35)
             return
         }
         if (ctrl instanceof QQC2.Switch) {
             ctrl.toggle()
             ctrl.toggled()
+            pulsePrimaryGamepad(6000, 9000, 35)
         }
     }
 
@@ -626,7 +640,8 @@ Item {
                 // ---- Gamepad legend ----
                 PC3.Label {
                     Layout.fillWidth: true
-                    text: i18n("↕: Navigate  ↔: Adjust  A: Toggle  B: Close")
+                    text: i18n("↕: Navigate  ↔: Adjust  %1: Toggle  %2: Close",
+                               acceptButtonLabel, closeButtonLabel)
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
                     opacity: 0.5
                     horizontalAlignment: Text.AlignHCenter

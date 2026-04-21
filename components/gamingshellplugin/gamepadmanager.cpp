@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_hints.h>
 
 #include <QDebug>
 #include <QQmlEngine>
@@ -114,6 +115,43 @@ GamepadDevice *GamepadManager::gamepadAt(int index) const
     return m_gamepads.at(index);
 }
 
+QString GamepadManager::buttonLabel(int button, int gamepadIndex) const
+{
+    GamepadDevice *device = nullptr;
+    if (gamepadIndex >= 0 && gamepadIndex < m_gamepads.size()) {
+        device = m_gamepads.at(gamepadIndex);
+    } else {
+        device = primaryGamepad();
+    }
+
+    if (!device) {
+        switch (button) {
+        case SDL_GAMEPAD_BUTTON_SOUTH:
+            return QStringLiteral("A");
+        case SDL_GAMEPAD_BUTTON_EAST:
+            return QStringLiteral("B");
+        case SDL_GAMEPAD_BUTTON_WEST:
+            return QStringLiteral("X");
+        case SDL_GAMEPAD_BUTTON_NORTH:
+            return QStringLiteral("Y");
+        case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
+            return QStringLiteral("LB");
+        case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
+            return QStringLiteral("RB");
+        case SDL_GAMEPAD_BUTTON_BACK:
+            return QStringLiteral("Back");
+        case SDL_GAMEPAD_BUTTON_START:
+            return QStringLiteral("Start");
+        case SDL_GAMEPAD_BUTTON_GUIDE:
+            return QStringLiteral("Guide");
+        default:
+            return QStringLiteral("?");
+        }
+    }
+
+    return device->buttonLabel(button);
+}
+
 // --- Lifecycle ---
 
 void GamepadManager::start()
@@ -121,11 +159,14 @@ void GamepadManager::start()
     if (m_sdlInitialized) {
         return;
     }
+
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     if (!SDL_Init(SDL_INIT_GAMEPAD)) {
         qWarning() << "GamepadManager: SDL_Init failed:" << SDL_GetError();
         return;
     }
     m_sdlInitialized = true;
+    SDL_SetGamepadEventsEnabled(true);
 
     // Enumerate already-connected gamepads
     int count = 0;
