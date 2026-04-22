@@ -97,7 +97,9 @@ private:
     void saveRecentTimestamp(const QString &storageId, const QDateTime &when);
     void applyFilter();
     void launchEntry(GameEntry &entry);
-    GameEntry *findEntryByStorageId(const QString &storageId);
+    // Returns the current m_allGames index for the storage id.
+    // Callers must re-lookup after any mutation that can rebuild or reorder the list.
+    int findEntryIndexByStorageId(const QString &storageId) const;
     void markLaunchSucceeded(const QString &storageId, const QString &name);
     void markLaunchFailed(const QString &name, const QString &error);
     void setPendingLaunch(const QString &name);

@@ -75,7 +75,12 @@ public:
             return {TokenType::CloseBrace, {}};
         }
         if (current == QLatin1Char('"')) {
-            return {TokenType::String, readQuotedString()};
+            bool terminated = false;
+            const QString text = readQuotedString(&terminated);
+            if (!terminated) {
+                return {TokenType::Invalid, text};
+            }
+            return {TokenType::String, text};
         }
 
         return {TokenType::String, readBareString()};
@@ -106,14 +111,21 @@ private:
         }
     }
 
-    QString readQuotedString()
+    QString readQuotedString(bool *terminated)
     {
         QString result;
         ++m_pos;
 
+        if (terminated) {
+            *terminated = false;
+        }
+
         while (m_pos < m_input.size()) {
             const QChar current = m_input.at(m_pos++);
             if (current == QLatin1Char('"')) {
+                if (terminated) {
+                    *terminated = true;
+                }
                 return result;
             }
             if (current == QLatin1Char('\\') && m_pos < m_input.size()) {
@@ -840,22 +852,24 @@ void GameLauncherProvider::clearLastLaunchError()
     Q_EMIT lastLaunchErrorChanged();
 }
 
-GameLauncherProvider::GameEntry *GameLauncherProvider::findEntryByStorageId(const QString &storageId)
+int GameLauncherProvider::findEntryIndexByStorageId(const QString &storageId) const
 {
-    for (auto &entry : m_allGames) {
-        if (entry.storageId == storageId) {
-            return &entry;
+    for (int index = 0; index < m_allGames.size(); ++index) {
+        if (m_allGames.at(index).storageId == storageId) {
+            return index;
         }
     }
-    return nullptr;
+    return -1;
 }
 
 void GameLauncherProvider::markLaunchSucceeded(const QString &storageId, const QString &name)
 {
-    if (auto *entry = findEntryByStorageId(storageId)) {
+    const int entryIndex = findEntryIndexByStorageId(storageId);
+    if (entryIndex >= 0) {
+        auto &entry = m_allGames[entryIndex];
         const auto now = QDateTime::currentDateTime();
-        saveRecentTimestamp(entry->storageId, now);
-        entry->lastPlayed = now;
+        saveRecentTimestamp(entry.storageId, now);
+        entry.lastPlayed = now;
     }
 
     setPendingLaunch(name);
