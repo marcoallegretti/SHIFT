@@ -16,6 +16,7 @@ Item {
 
     implicitHeight: taskList.count > 0 ? column.implicitHeight : 0
     readonly property bool hasTasks: taskList.count > 0
+    readonly property int taskCount: taskList.count
 
     signal taskActivated()
     signal moveDownRequested()

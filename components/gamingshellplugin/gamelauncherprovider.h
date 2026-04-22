@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QList>
 #include <QString>
+#include <QTimer>
 #include <qqmlregistration.h>
 
 #include <KSharedConfig>
@@ -22,6 +23,9 @@ class GameLauncherProvider : public QAbstractListModel
     Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
     Q_PROPERTY(QString sourceFilter READ sourceFilter WRITE setSourceFilter NOTIFY sourceFilterChanged)
     Q_PROPERTY(bool overlayEnabled READ overlayEnabled WRITE setOverlayEnabled NOTIFY overlayEnabledChanged)
+    Q_PROPERTY(bool launchPending READ launchPending NOTIFY launchPendingChanged)
+    Q_PROPERTY(QString pendingLaunchName READ pendingLaunchName NOTIFY launchPendingChanged)
+    Q_PROPERTY(QString lastLaunchError READ lastLaunchError NOTIFY lastLaunchErrorChanged)
 
 public:
     explicit GameLauncherProvider(QObject *parent = nullptr);
@@ -49,11 +53,16 @@ public:
     void setSourceFilter(const QString &source);
     bool overlayEnabled() const;
     void setOverlayEnabled(bool enabled);
+    bool launchPending() const;
+    QString pendingLaunchName() const;
+    QString lastLaunchError() const;
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void launch(int index);
     Q_INVOKABLE void launchByStorageId(const QString &storageId);
     Q_INVOKABLE QVariantList recentGames(int limit = 5) const;
+    Q_INVOKABLE void clearPendingLaunch();
+    Q_INVOKABLE void clearLastLaunchError();
 
 Q_SIGNALS:
     void countChanged();
@@ -61,7 +70,10 @@ Q_SIGNALS:
     void filterStringChanged();
     void sourceFilterChanged();
     void overlayEnabledChanged();
+    void launchPendingChanged();
+    void lastLaunchErrorChanged();
     void gameLaunched(const QString &name);
+    void gameLaunchFailed(const QString &name, const QString &error);
 
 private:
     struct GameEntry {
@@ -85,6 +97,10 @@ private:
     void saveRecentTimestamp(const QString &storageId, const QDateTime &when);
     void applyFilter();
     void launchEntry(GameEntry &entry);
+    GameEntry *findEntryByStorageId(const QString &storageId);
+    void markLaunchSucceeded(const QString &storageId, const QString &name);
+    void markLaunchFailed(const QString &name, const QString &error);
+    void setPendingLaunch(const QString &name);
 
     QList<GameEntry> m_allGames;
     QList<GameEntry> m_games; // filtered view
@@ -93,4 +109,8 @@ private:
     KSharedConfigPtr m_config;
     bool m_loading = false;
     bool m_overlayEnabled = false;
+    bool m_launchPending = false;
+    QString m_pendingLaunchName;
+    QString m_lastLaunchError;
+    QTimer m_pendingLaunchTimer;
 };

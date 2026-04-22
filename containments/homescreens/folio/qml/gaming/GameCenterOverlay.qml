@@ -22,6 +22,7 @@ Window {
     id: root
 
     required property var folio
+    property int launchTaskBaseline: 0
 
     signal gameStarted()
     signal dismissRequested()
@@ -51,14 +52,14 @@ Window {
 
     function launchGame(index) {
         pulsePrimaryGamepad(14000, 22000, 80)
+        launchTaskBaseline = runningGames.taskCount
         GamingShell.GameLauncherProvider.launch(index)
-        launchFade.restart()
     }
 
     function launchGameByStorageId(storageId) {
         pulsePrimaryGamepad(14000, 22000, 80)
+        launchTaskBaseline = runningGames.taskCount
         GamingShell.GameLauncherProvider.launchByStorageId(storageId)
-        launchFade.restart()
     }
 
     width: Screen.width
@@ -77,6 +78,25 @@ Window {
     opacity: visible ? 1 : 0
     Behavior on opacity {
         NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
+    }
+
+    Connections {
+        target: GamingShell.GameLauncherProvider
+
+        function onGameLaunched(name) {
+            launchFade.restart()
+        }
+
+        function onGameLaunchFailed(name, error) {
+            launchErrorTimer.restart()
+        }
+    }
+
+    Timer {
+        id: launchErrorTimer
+        interval: 6000
+        repeat: false
+        onTriggered: GamingShell.GameLauncherProvider.clearLastLaunchError()
     }
 
     onVisibleChanged: {
@@ -376,15 +396,49 @@ Window {
             RunningGamesView {
                 id: runningGames
                 Layout.fillWidth: true
-                onTaskActivated: root.gameStarted()
+                onTaskActivated: {
+                    GamingShell.GameLauncherProvider.clearPendingLaunch()
+                    root.gameStarted()
+                }
                 onMoveDownRequested: grid.forceActiveFocus()
+                onTaskCountChanged: {
+                    if (GamingShell.GameLauncherProvider.launchPending
+                            && taskCount > root.launchTaskBaseline) {
+                        GamingShell.GameLauncherProvider.clearPendingLaunch()
+                    }
+                }
+            }
+
+            Kirigami.InlineMessage {
+                Layout.fillWidth: true
+                type: Kirigami.MessageType.Error
+                text: GamingShell.GameLauncherProvider.lastLaunchError
+                visible: text.length > 0
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                visible: GamingShell.GameLauncherProvider.launchPending
+
+                Kirigami.Icon {
+                    implicitWidth: Kirigami.Units.iconSizes.small
+                    implicitHeight: Kirigami.Units.iconSizes.small
+                    source: "system-run"
+                }
+
+                PC3.Label {
+                    Layout.fillWidth: true
+                    text: i18n("Launching %1…", GamingShell.GameLauncherProvider.pendingLaunchName)
+                    opacity: 0.75
+                }
             }
 
             // ---- continue playing ----
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
-                visible: recentList.count > 0 && !runningGames.hasTasks
+                visible: recentList.count > 0
 
                 Kirigami.Heading {
                     level: 2

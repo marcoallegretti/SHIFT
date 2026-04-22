@@ -5,6 +5,7 @@
 
 #include <KConfigGroup>
 #include <KIO/ApplicationLauncherJob>
+#include <KJob>
 #include <KService>
 #include <KSharedConfig>
 #include <KShell>
@@ -13,6 +14,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QFile>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -23,13 +25,203 @@
 #include <QStandardPaths>
 #include <QTextStream>
 
+#include <memory>
+
 static const QString s_recentGroup = QStringLiteral("GamingRecentlyPlayed");
+
+namespace
+{
+struct VdfNode {
+    QHash<QString, QString> values;
+    QHash<QString, std::shared_ptr<VdfNode>> children;
+};
+
+class VdfTokenizer
+{
+public:
+    enum class TokenType {
+        End,
+        String,
+        OpenBrace,
+        CloseBrace,
+        Invalid,
+    };
+
+    struct Token {
+        TokenType type = TokenType::End;
+        QString text;
+    };
+
+    explicit VdfTokenizer(QStringView input)
+        : m_input(input)
+    {
+    }
+
+    Token next()
+    {
+        skipWhitespaceAndComments();
+
+        if (m_pos >= m_input.size()) {
+            return {};
+        }
+
+        const QChar current = m_input.at(m_pos);
+        if (current == QLatin1Char('{')) {
+            ++m_pos;
+            return {TokenType::OpenBrace, {}};
+        }
+        if (current == QLatin1Char('}')) {
+            ++m_pos;
+            return {TokenType::CloseBrace, {}};
+        }
+        if (current == QLatin1Char('"')) {
+            return {TokenType::String, readQuotedString()};
+        }
+
+        return {TokenType::String, readBareString()};
+    }
+
+    int position() const
+    {
+        return m_pos;
+    }
+
+private:
+    void skipWhitespaceAndComments()
+    {
+        while (m_pos < m_input.size()) {
+            const QChar current = m_input.at(m_pos);
+            if (current.isSpace()) {
+                ++m_pos;
+                continue;
+            }
+            if (current == QLatin1Char('/') && m_pos + 1 < m_input.size() && m_input.at(m_pos + 1) == QLatin1Char('/')) {
+                m_pos += 2;
+                while (m_pos < m_input.size() && m_input.at(m_pos) != QLatin1Char('\n')) {
+                    ++m_pos;
+                }
+                continue;
+            }
+            break;
+        }
+    }
+
+    QString readQuotedString()
+    {
+        QString result;
+        ++m_pos;
+
+        while (m_pos < m_input.size()) {
+            const QChar current = m_input.at(m_pos++);
+            if (current == QLatin1Char('"')) {
+                return result;
+            }
+            if (current == QLatin1Char('\\') && m_pos < m_input.size()) {
+                const QChar escaped = m_input.at(m_pos++);
+                switch (escaped.unicode()) {
+                case 'n':
+                    result.append(QLatin1Char('\n'));
+                    break;
+                case 't':
+                    result.append(QLatin1Char('\t'));
+                    break;
+                case 'r':
+                    result.append(QLatin1Char('\r'));
+                    break;
+                case '\\':
+                case '"':
+                    result.append(escaped);
+                    break;
+                default:
+                    result.append(escaped);
+                    break;
+                }
+                continue;
+            }
+            result.append(current);
+        }
+
+        return result;
+    }
+
+    QString readBareString()
+    {
+        const int start = m_pos;
+        while (m_pos < m_input.size()) {
+            const QChar current = m_input.at(m_pos);
+            if (current.isSpace() || current == QLatin1Char('{') || current == QLatin1Char('}') || current == QLatin1Char('"')) {
+                break;
+            }
+            if (current == QLatin1Char('/') && m_pos + 1 < m_input.size() && m_input.at(m_pos + 1) == QLatin1Char('/')) {
+                break;
+            }
+            ++m_pos;
+        }
+        return m_input.sliced(start, m_pos - start).toString();
+    }
+
+    QStringView m_input;
+    int m_pos = 0;
+};
+
+bool parseVdf(const QString &input, VdfNode &root, QString *error)
+{
+    VdfTokenizer tokenizer(input);
+    QList<VdfNode *> stack = {&root};
+
+    while (true) {
+        const auto key = tokenizer.next();
+        if (key.type == VdfTokenizer::TokenType::End) {
+            if (stack.size() != 1 && error) {
+                *error = QStringLiteral("unexpected end of file");
+            }
+            return stack.size() == 1;
+        }
+        if (key.type == VdfTokenizer::TokenType::CloseBrace) {
+            if (stack.size() == 1) {
+                if (error) {
+                    *error = QStringLiteral("unexpected closing brace at position %1").arg(tokenizer.position());
+                }
+                return false;
+            }
+            stack.removeLast();
+            continue;
+        }
+        if (key.type != VdfTokenizer::TokenType::String || key.text.isEmpty()) {
+            if (error) {
+                *error = QStringLiteral("invalid key at position %1").arg(tokenizer.position());
+            }
+            return false;
+        }
+
+        const auto value = tokenizer.next();
+        if (value.type == VdfTokenizer::TokenType::String) {
+            stack.last()->values.insert(key.text, value.text);
+            continue;
+        }
+        if (value.type == VdfTokenizer::TokenType::OpenBrace) {
+            auto child = std::make_shared<VdfNode>();
+            stack.last()->children.insert(key.text, child);
+            stack.append(child.get());
+            continue;
+        }
+
+        if (error) {
+            *error = QStringLiteral("expected value for key '%1'").arg(key.text);
+        }
+        return false;
+    }
+}
+} // namespace
 
 GameLauncherProvider::GameLauncherProvider(QObject *parent)
     : QAbstractListModel(parent)
     , m_config(KSharedConfig::openConfig(QStringLiteral("plasmamobilerc")))
 {
     connect(KSycoca::self(), &KSycoca::databaseChanged, this, &GameLauncherProvider::refresh);
+    m_pendingLaunchTimer.setInterval(15000);
+    m_pendingLaunchTimer.setSingleShot(true);
+    connect(&m_pendingLaunchTimer, &QTimer::timeout, this, &GameLauncherProvider::clearPendingLaunch);
     refresh();
 }
 
@@ -84,6 +276,21 @@ int GameLauncherProvider::count() const
 bool GameLauncherProvider::loading() const
 {
     return m_loading;
+}
+
+bool GameLauncherProvider::launchPending() const
+{
+    return m_launchPending;
+}
+
+QString GameLauncherProvider::pendingLaunchName() const
+{
+    return m_pendingLaunchName;
+}
+
+QString GameLauncherProvider::lastLaunchError() const
+{
+    return m_lastLaunchError;
 }
 
 void GameLauncherProvider::refresh()
@@ -142,27 +349,45 @@ void GameLauncherProvider::launchByStorageId(const QString &storageId)
 
 void GameLauncherProvider::launchEntry(GameEntry &entry)
 {
+    clearLastLaunchError();
+
     if (entry.source == QLatin1String("desktop")) {
         auto service = KService::serviceByStorageId(entry.storageId);
-        if (service) {
-            auto *job = new KIO::ApplicationLauncherJob(service);
-            job->start();
+        if (!service) {
+            markLaunchFailed(entry.name, QStringLiteral("Desktop entry is no longer available"));
+            return;
         }
+
+        auto *job = new KIO::ApplicationLauncherJob(service);
+        connect(job, &KJob::result, this, [this, job, storageId = entry.storageId, name = entry.name]() {
+            if (job->error() != 0) {
+                markLaunchFailed(name, job->errorString());
+                return;
+            }
+            markLaunchSucceeded(storageId, name);
+        });
+        job->start();
     } else if (entry.launchCommand.contains(QStringLiteral("://"))) {
         // Protocol handler (e.g. heroic://launch/...) — open via xdg-open
-        QProcess::startDetached(QStringLiteral("xdg-open"), {entry.launchCommand});
+        if (!QProcess::startDetached(QStringLiteral("xdg-open"), {entry.launchCommand})) {
+            markLaunchFailed(entry.name, QStringLiteral("Unable to start xdg-open"));
+            return;
+        }
+        markLaunchSucceeded(entry.storageId, entry.name);
     } else {
         QStringList parts = KShell::splitArgs(entry.launchCommand);
-        if (!parts.isEmpty()) {
-            QString program = parts.takeFirst();
-            QProcess::startDetached(program, parts);
+        if (parts.isEmpty()) {
+            markLaunchFailed(entry.name, QStringLiteral("Launch command is empty"));
+            return;
         }
-    }
 
-    Q_EMIT gameLaunched(entry.name);
-    const auto now = QDateTime::currentDateTime();
-    saveRecentTimestamp(entry.storageId, now);
-    entry.lastPlayed = now;
+        QString program = parts.takeFirst();
+        if (!QProcess::startDetached(program, parts)) {
+            markLaunchFailed(entry.name, QStringLiteral("Unable to start %1").arg(program));
+            return;
+        }
+        markLaunchSucceeded(entry.storageId, entry.name);
+    }
 }
 
 void GameLauncherProvider::deduplicateGames()
@@ -237,21 +462,30 @@ void GameLauncherProvider::loadSteamGames()
         if (!vdf.open(QIODevice::ReadOnly | QIODevice::Text)) {
             continue;
         }
-        // Simple parse: look for "path" lines
-        static const QRegularExpression pathRe(QStringLiteral("\"path\"\\s+\"([^\"]+)\""));
-        QTextStream stream(&vdf);
-        while (!stream.atEnd()) {
-            const QString line = stream.readLine();
-            auto match = pathRe.match(line);
-            if (match.hasMatch()) {
-                libraryPaths.append(match.captured(1));
+        const QString content = QString::fromUtf8(vdf.readAll());
+        VdfNode document;
+        QString error;
+        if (!parseVdf(content, document, &error)) {
+            qWarning() << "GameLauncherProvider: cannot parse Steam libraryfolders" << vdfPath << error;
+            continue;
+        }
+
+        const VdfNode *libraries = nullptr;
+        if (document.children.contains(QStringLiteral("libraryfolders"))) {
+            libraries = document.children.value(QStringLiteral("libraryfolders")).get();
+        } else {
+            libraries = &document;
+        }
+
+        for (auto it = libraries->children.cbegin(); it != libraries->children.cend(); ++it) {
+            const QString path = it.value()->values.value(QStringLiteral("path"));
+            if (!path.isEmpty()) {
+                libraryPaths.append(path);
             }
         }
     }
 
-    // Scan each library path for appmanifest_*.acf
-    static const QRegularExpression nameRe(QStringLiteral("\"name\"\\s+\"([^\"]+)\""));
-    static const QRegularExpression appidRe(QStringLiteral("\"appid\"\\s+\"(\\d+)\""));
+    libraryPaths.removeDuplicates();
 
     for (const auto &libPath : std::as_const(libraryPaths)) {
         QDir steamapps(libPath + QStringLiteral("/steamapps"));
@@ -264,27 +498,18 @@ void GameLauncherProvider::loadSteamGames()
             if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 continue;
             }
-            QString appName;
-            QString appId;
-            QTextStream ts(&f);
-            while (!ts.atEnd()) {
-                const QString line = ts.readLine();
-                if (appName.isEmpty()) {
-                    auto m = nameRe.match(line);
-                    if (m.hasMatch()) {
-                        appName = m.captured(1);
-                    }
-                }
-                if (appId.isEmpty()) {
-                    auto m = appidRe.match(line);
-                    if (m.hasMatch()) {
-                        appId = m.captured(1);
-                    }
-                }
-                if (!appName.isEmpty() && !appId.isEmpty()) {
-                    break;
-                }
+            VdfNode manifestData;
+            QString error;
+            if (!parseVdf(QString::fromUtf8(f.readAll()), manifestData, &error)) {
+                qWarning() << "GameLauncherProvider: cannot parse Steam manifest" << manifest << error;
+                continue;
             }
+
+            const VdfNode *appState =
+                manifestData.children.contains(QStringLiteral("AppState")) ? manifestData.children.value(QStringLiteral("AppState")).get() : &manifestData;
+
+            const QString appName = appState->values.value(QStringLiteral("name"));
+            const QString appId = appState->values.value(QStringLiteral("appid"));
 
             if (appName.isEmpty() || appId.isEmpty()) {
                 continue;
@@ -591,6 +816,76 @@ void GameLauncherProvider::saveRecentTimestamp(const QString &storageId, const Q
     KConfigGroup group(m_config, s_recentGroup);
     group.writeEntry(storageId, when);
     group.sync();
+}
+
+void GameLauncherProvider::clearPendingLaunch()
+{
+    if (!m_launchPending && m_pendingLaunchName.isEmpty()) {
+        return;
+    }
+
+    m_pendingLaunchTimer.stop();
+    m_launchPending = false;
+    m_pendingLaunchName.clear();
+    Q_EMIT launchPendingChanged();
+}
+
+void GameLauncherProvider::clearLastLaunchError()
+{
+    if (m_lastLaunchError.isEmpty()) {
+        return;
+    }
+
+    m_lastLaunchError.clear();
+    Q_EMIT lastLaunchErrorChanged();
+}
+
+GameLauncherProvider::GameEntry *GameLauncherProvider::findEntryByStorageId(const QString &storageId)
+{
+    for (auto &entry : m_allGames) {
+        if (entry.storageId == storageId) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+void GameLauncherProvider::markLaunchSucceeded(const QString &storageId, const QString &name)
+{
+    if (auto *entry = findEntryByStorageId(storageId)) {
+        const auto now = QDateTime::currentDateTime();
+        saveRecentTimestamp(entry->storageId, now);
+        entry->lastPlayed = now;
+    }
+
+    setPendingLaunch(name);
+    Q_EMIT gameLaunched(name);
+}
+
+void GameLauncherProvider::markLaunchFailed(const QString &name, const QString &error)
+{
+    clearPendingLaunch();
+
+    const QString message = error.isEmpty() ? tr("Unable to launch %1").arg(name) : tr("Unable to launch %1: %2").arg(name, error);
+
+    if (m_lastLaunchError != message) {
+        m_lastLaunchError = message;
+        Q_EMIT lastLaunchErrorChanged();
+    }
+
+    Q_EMIT gameLaunchFailed(name, message);
+}
+
+void GameLauncherProvider::setPendingLaunch(const QString &name)
+{
+    const bool changed = !m_launchPending || m_pendingLaunchName != name;
+    m_launchPending = true;
+    m_pendingLaunchName = name;
+    m_pendingLaunchTimer.start();
+
+    if (changed) {
+        Q_EMIT launchPendingChanged();
+    }
 }
 
 QVariantList GameLauncherProvider::recentGames(int limit) const

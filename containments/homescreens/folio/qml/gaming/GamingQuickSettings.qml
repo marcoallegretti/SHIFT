@@ -520,8 +520,8 @@ Item {
                         }
                         PC3.Label {
                             text: GamingShell.GameModeControl.active
-                                  ? i18n("GameMode active")
-                                  : i18n("GameMode standby")
+                                  ? i18n("GameMode requested")
+                                  : i18n("GameMode not requested")
                             opacity: 0.7
                         }
                     }
