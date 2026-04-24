@@ -288,8 +288,8 @@ Window {
         }
     }
 
-    // Cycle through source filter tabs (All → Steam → Desktop → All …)
-    readonly property var _sourceFilters: ["", "steam", "desktop", "lutris", "heroic"]
+    // Cycle through source filter tabs.
+    readonly property var _sourceFilters: ["", "steam", "desktop", "waydroid", "lutris", "heroic"]
     function cycleSourceFilter(direction) {
         var current = _sourceFilters.indexOf(
             GamingShell.GameLauncherProvider.sourceFilter)
@@ -298,6 +298,40 @@ Window {
                    % _sourceFilters.length
         GamingShell.GameLauncherProvider.sourceFilter = _sourceFilters[next]
         sourceFilterBar.currentIndex = next
+    }
+
+    function sourceLabel(source) {
+        switch (source) {
+        case "steam":
+            return i18n("Steam")
+        case "waydroid":
+            return i18n("Waydroid")
+        case "lutris":
+            return i18n("Lutris")
+        case "heroic":
+            return i18n("Heroic")
+        case "flatpak":
+            return i18n("Flatpak")
+        default:
+            return ""
+        }
+    }
+
+    function sourceChipColor(source) {
+        switch (source) {
+        case "steam":
+            return Qt.rgba(0.12, 0.23, 0.38, 0.9)
+        case "waydroid":
+            return Qt.rgba(0.13, 0.42, 0.36, 0.92)
+        case "lutris":
+            return Qt.rgba(0.42, 0.25, 0.11, 0.9)
+        case "heroic":
+            return Qt.rgba(0.37, 0.19, 0.16, 0.9)
+        case "flatpak":
+            return Qt.rgba(0.16, 0.26, 0.46, 0.9)
+        default:
+            return Qt.rgba(0.2, 0.2, 0.2, 0.72)
+        }
     }
 
     Rectangle {
@@ -544,6 +578,11 @@ Window {
                         onClicked: GamingShell.GameLauncherProvider.sourceFilter = "desktop"
                     }
                     QQC2.TabButton {
+                        text: i18n("Waydroid")
+                        width: implicitWidth
+                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "waydroid"
+                    }
+                    QQC2.TabButton {
                         text: "Lutris"
                         width: implicitWidth
                         onClicked: GamingShell.GameLauncherProvider.sourceFilter = "lutris"
@@ -586,7 +625,7 @@ Window {
                           : i18n("No games found")
                     explanation: searchField.text.length > 0
                                  ? ""
-                                 : i18n("Install games or check that they have the Game category in their .desktop file")
+                                 : i18n("Install games, or enable supported Waydroid apps from the Waydroid applications page")
                 }
 
                 onActiveFocusChanged: {
@@ -657,6 +696,26 @@ Window {
                                         smooth: true
                                         asynchronous: true
                                     }
+
+                                    Rectangle {
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.margins: Kirigami.Units.smallSpacing
+                                        visible: source !== "desktop"
+                                        radius: height / 2
+                                        color: root.sourceChipColor(source)
+                                        implicitHeight: chipLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                        implicitWidth: chipLabel.implicitWidth + Kirigami.Units.largeSpacing
+
+                                        PC3.Label {
+                                            id: chipLabel
+                                            anchors.centerIn: parent
+                                            text: root.sourceLabel(source)
+                                            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.72
+                                            font.weight: Font.DemiBold
+                                            color: "white"
+                                        }
+                                    }
                                 }
 
                                 // Title beneath artwork
@@ -710,17 +769,22 @@ Window {
                                            : Kirigami.Theme.textColor
                                 }
 
-                                // Source badge
-                                PC3.Label {
+                                Rectangle {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: source === "steam" ? "Steam"
-                                        : source === "flatpak" ? "Flatpak"
-                                        : source === "lutris" ? "Lutris"
-                                        : source === "heroic" ? "Heroic"
-                                        : ""
                                     visible: source !== "desktop"
-                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
-                                    opacity: 0.6
+                                    radius: height / 2
+                                    color: root.sourceChipColor(source)
+                                    implicitHeight: sourceChipLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                    implicitWidth: sourceChipLabel.implicitWidth + Kirigami.Units.largeSpacing
+
+                                    PC3.Label {
+                                        id: sourceChipLabel
+                                        anchors.centerIn: parent
+                                        text: root.sourceLabel(source)
+                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.72
+                                        font.weight: Font.DemiBold
+                                        color: "white"
+                                    }
                                 }
 
                                 Item { Layout.fillHeight: true }

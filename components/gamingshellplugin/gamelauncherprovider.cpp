@@ -28,6 +28,8 @@
 #include <memory>
 
 static const QString s_recentGroup = QStringLiteral("GamingRecentlyPlayed");
+static const QString s_waydroidGamingGroup = QStringLiteral("WaydroidGaming");
+static const QString s_gameShellPackagesKey = QStringLiteral("gameShellPackages");
 
 namespace
 {
@@ -224,6 +226,29 @@ bool parseVdf(const QString &input, VdfNode &root, QString *error)
         return false;
     }
 }
+
+QString waydroidPackageFromService(const KService::Ptr &service)
+{
+    static const QRegularExpression execPattern(QStringLiteral("^waydroid\\s+app\\s+launch\\s+([^\\s%]+)"));
+    const QRegularExpressionMatch execMatch = execPattern.match(service->exec());
+    if (execMatch.hasMatch()) {
+        return execMatch.captured(1);
+    }
+
+    static const QRegularExpression storageIdPattern(QStringLiteral("^waydroid\\.(.+)\\.desktop$"));
+    const QRegularExpressionMatch storageIdMatch = storageIdPattern.match(service->storageId());
+    if (!storageIdMatch.hasMatch()) {
+        return {};
+    }
+
+    return storageIdMatch.captured(1);
+}
+
+QStringList waydroidGameShellPackages(const KSharedConfigPtr &config)
+{
+    const KConfigGroup group(config, s_waydroidGamingGroup);
+    return group.readEntry(s_gameShellPackagesKey, QStringList{});
+}
 } // namespace
 
 GameLauncherProvider::GameLauncherProvider(QObject *parent)
@@ -231,6 +256,13 @@ GameLauncherProvider::GameLauncherProvider(QObject *parent)
     , m_config(KSharedConfig::openConfig(QStringLiteral("plasmamobilerc")))
 {
     connect(KSycoca::self(), &KSycoca::databaseChanged, this, &GameLauncherProvider::refresh);
+    m_configWatcher = KConfigWatcher::create(m_config);
+    connect(m_configWatcher.data(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup &group) {
+        if (group.name() == s_waydroidGamingGroup) {
+            m_config->reparseConfiguration();
+            refresh();
+        }
+    });
     m_pendingLaunchTimer.setInterval(15000);
     m_pendingLaunchTimer.setSingleShot(true);
     connect(&m_pendingLaunchTimer, &QTimer::timeout, this, &GameLauncherProvider::clearPendingLaunch);
@@ -363,7 +395,7 @@ void GameLauncherProvider::launchEntry(GameEntry &entry)
 {
     clearLastLaunchError();
 
-    if (entry.source == QLatin1String("desktop")) {
+    if (entry.source == QLatin1String("desktop") || entry.source == QLatin1String("waydroid")) {
         auto service = KService::serviceByStorageId(entry.storageId);
         if (!service) {
             markLaunchFailed(entry.name, QStringLiteral("Desktop entry is no longer available"));
@@ -426,6 +458,8 @@ void GameLauncherProvider::deduplicateGames()
 
 void GameLauncherProvider::loadDesktopGames()
 {
+    const QStringList allowedWaydroidPackages = waydroidGameShellPackages(m_config);
+    const QSet<QString> enabledWaydroidPackages(allowedWaydroidPackages.cbegin(), allowedWaydroidPackages.cend());
     const auto services = KService::allServices();
     for (const auto &service : services) {
         if (service->noDisplay() || service->exec().isEmpty()) {
@@ -433,20 +467,29 @@ void GameLauncherProvider::loadDesktopGames()
         }
         const QStringList cats = service->categories();
         bool isGame = false;
+        bool isWaydroidApp = false;
         for (const auto &cat : cats) {
             if (cat.compare(QLatin1String("Game"), Qt::CaseInsensitive) == 0) {
                 isGame = true;
-                break;
+            } else if (cat.compare(QLatin1String("X-WayDroid-App"), Qt::CaseInsensitive) == 0) {
+                isWaydroidApp = true;
             }
         }
         if (!isGame) {
-            continue;
+            if (!isWaydroidApp) {
+                continue;
+            }
+
+            const QString packageName = waydroidPackageFromService(service);
+            if (packageName.isEmpty() || !enabledWaydroidPackages.contains(packageName)) {
+                continue;
+            }
         }
 
         GameEntry entry;
         entry.name = service->name();
         entry.icon = service->icon();
-        entry.source = QStringLiteral("desktop");
+        entry.source = isWaydroidApp ? QStringLiteral("waydroid") : QStringLiteral("desktop");
         entry.storageId = service->storageId();
         entry.launchCommand = service->exec();
         entry.installed = true;

@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <qqmlregistration.h>
 
+#include <KConfigWatcher>
 #include <KSharedConfig>
 
 class GameLauncherProvider : public QAbstractListModel
@@ -33,7 +34,7 @@ public:
     enum Roles {
         NameRole = Qt::UserRole + 1,
         IconRole,
-        SourceRole, // "desktop", "steam", "flatpak"
+        SourceRole, // "desktop", "waydroid", "steam", "flatpak"
         StorageIdRole, // .desktop file name or launch URI
         LaunchCommandRole,
         ArtworkRole, // path to banner/grid image (empty if none)
@@ -107,7 +108,7 @@ private:
     QList<GameEntry> m_allGames;
     QList<GameEntry> m_games; // filtered view
     QString m_filterString;
-    QString m_sourceFilter; // empty = all, or "desktop"/"steam"/"flatpak"
+    QString m_sourceFilter; // empty = all, or a specific source such as "desktop" or "waydroid"
     KSharedConfigPtr m_config;
     bool m_loading = false;
     bool m_overlayEnabled = false;
@@ -115,4 +116,5 @@ private:
     QString m_pendingLaunchName;
     QString m_lastLaunchError;
     QTimer m_pendingLaunchTimer;
+    KConfigWatcher::Ptr m_configWatcher;
 };
