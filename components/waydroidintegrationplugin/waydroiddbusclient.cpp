@@ -6,24 +6,38 @@
 
 #include "waydroiddbusclient.h"
 
+#include <KConfigGroup>
+
 #include <QClipboard>
 #include <QCoroDBusPendingReply>
+#include <QDBusMessage>
 #include <QGuiApplication>
+#include <QTimer>
 
 using namespace Qt::StringLiterals;
+
+static const QString s_waydroidGamingGroup = QStringLiteral("WaydroidGaming");
+static const QString s_gameShellPackagesKey = QStringLiteral("gameShellPackages");
 
 WaydroidDBusClient::WaydroidDBusClient(QObject *parent)
     : QObject{parent}
     , m_interface{new OrgKdePlasmashellWaydroidInterface{u"org.kde.plasmashell"_s, u"/Waydroid"_s, QDBusConnection::sessionBus(), this}}
     , m_watcher{new QDBusServiceWatcher{u"org.kde.plasmashell"_s, QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForOwnerChange, this}}
     , m_applicationListModel{new WaydroidApplicationListModel{this}}
+    , m_config{KSharedConfig::openConfig(QStringLiteral("plasmamobilerc"))}
 {
+    m_configWatcher = KConfigWatcher::create(m_config);
+    connect(m_configWatcher.data(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup &group) {
+        if (group.name() == s_waydroidGamingGroup) {
+            m_config->reparseConfiguration();
+            reloadGameShellPackages();
+        }
+    });
+    reloadGameShellPackages();
+
     // Check if the service is already running
     if (QDBusConnection::sessionBus().interface()->isServiceRegistered(u"org.kde.plasmashell"_s)) {
-        m_connected = true;
-        if (m_interface->isValid()) {
-            connectSignals();
-        }
+        checkWaydroidObject();
     }
 
     connect(m_watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, [this](const QString &service, const QString &oldOwner, const QString &newOwner) {
@@ -31,12 +45,11 @@ WaydroidDBusClient::WaydroidDBusClient(QObject *parent)
             if (newOwner.isEmpty()) {
                 // Service stopped
                 m_connected = false;
+                m_connectionCheckPending = false;
+                resetState();
             } else if (oldOwner.isEmpty()) {
                 // Service started
-                m_connected = true;
-                if (m_interface->isValid()) {
-                    connectSignals();
-                }
+                checkWaydroidObject();
             }
         }
     });
@@ -44,26 +57,32 @@ WaydroidDBusClient::WaydroidDBusClient(QObject *parent)
 
 void WaydroidDBusClient::connectSignals()
 {
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::statusChanged, this, &WaydroidDBusClient::updateStatus);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::downloadStatusChanged, this, [this](double downloaded, double total, double speed) {
-        Q_EMIT downloadStatusChanged(downloaded, total, speed);
-    });
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::sessionStatusChanged, this, &WaydroidDBusClient::updateSessionStatus);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::systemTypeChanged, this, &WaydroidDBusClient::updateSystemType);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::ipAddressChanged, this, &WaydroidDBusClient::updateIpAddress);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::androidIdChanged, this, &WaydroidDBusClient::updateAndroidId);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::multiWindowsChanged, this, &WaydroidDBusClient::updateMultiWindows);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::suspendChanged, this, &WaydroidDBusClient::updateSuspend);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::ueventChanged, this, &WaydroidDBusClient::updateUevent);
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::actionFinished, this, [this](const QString message) {
-        Q_EMIT actionFinished(message);
-    });
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::actionFailed, this, [this](const QString message) {
-        Q_EMIT actionFailed(message);
-    });
-    connect(m_interface, &OrgKdePlasmashellWaydroidInterface::errorOccurred, this, [this](const QString title, const QString message) {
-        Q_EMIT errorOccurred(title, message);
-    });
+    if (!m_signalsConnected) {
+        m_signalsConnected = true;
+
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::statusChanged, this, &WaydroidDBusClient::updateStatus);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::downloadStatusChanged, this, [this](double downloaded, double total, double speed) {
+            Q_EMIT downloadStatusChanged(downloaded, total, speed);
+        });
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::sessionStatusChanged, this, &WaydroidDBusClient::updateSessionStatus);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::systemTypeChanged, this, &WaydroidDBusClient::updateSystemType);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::ipAddressChanged, this, &WaydroidDBusClient::updateIpAddress);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::androidIdChanged, this, &WaydroidDBusClient::updateAndroidId);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::multiWindowsChanged, this, &WaydroidDBusClient::updateMultiWindows);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::suspendChanged, this, &WaydroidDBusClient::updateSuspend);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::ueventChanged, this, &WaydroidDBusClient::updateUevent);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::fakeTouchChanged, this, &WaydroidDBusClient::updateFakeTouch);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::fakeWifiChanged, this, &WaydroidDBusClient::updateFakeWifi);
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::actionFinished, this, [this](const QString message) {
+            Q_EMIT actionFinished(message);
+        });
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::actionFailed, this, [this](const QString message) {
+            Q_EMIT actionFailed(message);
+        });
+        connect(m_interface, &OrgKdePlasmashellWaydroidInterface::errorOccurred, this, [this](const QString title, const QString message) {
+            Q_EMIT errorOccurred(title, message);
+        });
+    }
 
     initializeApplicationListModel();
     updateStatus();
@@ -74,6 +93,118 @@ void WaydroidDBusClient::connectSignals()
     updateMultiWindows();
     updateSuspend();
     updateUevent();
+    updateFakeTouch();
+    updateFakeWifi();
+}
+
+void WaydroidDBusClient::checkWaydroidObject()
+{
+    if (m_connectionCheckPending) {
+        return;
+    }
+
+    m_connectionCheckPending = true;
+
+    const QDBusMessage message =
+        QDBusMessage::createMethodCall(u"org.kde.plasmashell"_s, u"/Waydroid"_s, u"org.freedesktop.DBus.Introspectable"_s, u"Introspect"_s);
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, &WaydroidDBusClient::onWaydroidObjectCheckFinished);
+}
+
+void WaydroidDBusClient::onWaydroidObjectCheckFinished(QDBusPendingCallWatcher *watcher)
+{
+    m_connectionCheckPending = false;
+
+    QDBusPendingReply<QString> reply = *watcher;
+    if (!reply.isValid()) {
+        m_connected = false;
+        watcher->deleteLater();
+        resetState();
+        scheduleWaydroidObjectCheck();
+        return;
+    }
+
+    m_connected = true;
+    watcher->deleteLater();
+
+    if (m_interface->isValid()) {
+        connectSignals();
+    }
+}
+
+void WaydroidDBusClient::handleUnavailableReply()
+{
+    if (!m_connected) {
+        return;
+    }
+
+    m_connected = false;
+    resetState();
+    scheduleWaydroidObjectCheck();
+}
+
+void WaydroidDBusClient::resetState()
+{
+    if (m_status != NotSupported) {
+        m_status = NotSupported;
+        Q_EMIT statusChanged();
+    }
+
+    if (m_sessionStatus != SessionStopped) {
+        m_sessionStatus = SessionStopped;
+        Q_EMIT sessionStatusChanged();
+    }
+
+    if (m_systemType != UnknownSystemType) {
+        m_systemType = UnknownSystemType;
+        Q_EMIT systemTypeChanged();
+    }
+
+    if (!m_ipAddress.isEmpty()) {
+        m_ipAddress.clear();
+        Q_EMIT ipAddressChanged();
+    }
+
+    if (!m_androidId.isEmpty()) {
+        m_androidId.clear();
+        Q_EMIT androidIdChanged();
+    }
+
+    if (m_multiWindows) {
+        m_multiWindows = false;
+        Q_EMIT multiWindowsChanged();
+    }
+
+    if (m_suspend) {
+        m_suspend = false;
+        Q_EMIT suspendChanged();
+    }
+
+    if (m_uevent) {
+        m_uevent = false;
+        Q_EMIT ueventChanged();
+    }
+
+    if (!m_fakeTouch.isEmpty()) {
+        m_fakeTouch.clear();
+        Q_EMIT fakeTouchChanged();
+    }
+
+    if (!m_fakeWifi.isEmpty()) {
+        m_fakeWifi.clear();
+        Q_EMIT fakeWifiChanged();
+    }
+
+    m_applicationListModel->clearApplications();
+}
+
+void WaydroidDBusClient::scheduleWaydroidObjectCheck()
+{
+    if (!QDBusConnection::sessionBus().interface()->isServiceRegistered(u"org.kde.plasmashell"_s)) {
+        return;
+    }
+
+    QTimer::singleShot(1000, this, &WaydroidDBusClient::checkWaydroidObject);
 }
 
 void WaydroidDBusClient::initializeApplicationListModel()
@@ -85,6 +216,7 @@ void WaydroidDBusClient::initializeApplicationListModel()
         QDBusPendingReply<QList<QDBusObjectPath>> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch applications:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -133,6 +265,10 @@ WaydroidApplicationListModel *WaydroidDBusClient::applicationListModel() const
 
 QCoro::Task<void> WaydroidDBusClient::setMultiWindowsTask(const bool multiWindows)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->setMultiWindows(multiWindows);
 }
 
@@ -148,6 +284,10 @@ bool WaydroidDBusClient::multiWindows() const
 
 QCoro::Task<void> WaydroidDBusClient::setSuspendTask(const bool suspend)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->setSuspend(suspend);
 }
 
@@ -163,6 +303,10 @@ bool WaydroidDBusClient::suspend() const
 
 QCoro::Task<void> WaydroidDBusClient::setUeventTask(const bool uevent)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->setUevent(uevent);
 }
 
@@ -173,6 +317,10 @@ QCoro::QmlTask WaydroidDBusClient::setUevent(const bool uevent)
 
 QCoro::Task<void> WaydroidDBusClient::refreshSessionInfoTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->refreshSessionInfo();
 }
 
@@ -183,6 +331,10 @@ QCoro::QmlTask WaydroidDBusClient::refreshSessionInfo()
 
 QCoro::Task<void> WaydroidDBusClient::refreshAndroidIdTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->refreshAndroidId();
 }
 
@@ -193,6 +345,10 @@ QCoro::QmlTask WaydroidDBusClient::refreshAndroidId()
 
 QCoro::Task<void> WaydroidDBusClient::refreshApplicationsTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->refreshApplications();
 }
 
@@ -201,13 +357,87 @@ QCoro::QmlTask WaydroidDBusClient::refreshApplications()
     return refreshApplicationsTask();
 }
 
+bool WaydroidDBusClient::gameShellEnabledForPackage(const QString &packageName) const
+{
+    return m_gameShellPackages.contains(packageName);
+}
+
+void WaydroidDBusClient::setGameShellEnabledForPackage(const QString &packageName, bool enabled)
+{
+    QStringList packages = m_gameShellPackages;
+    packages.removeAll(packageName);
+    if (enabled) {
+        packages.append(packageName);
+    }
+    packages.removeDuplicates();
+    packages.sort();
+
+    if (packages == m_gameShellPackages) {
+        return;
+    }
+
+    KConfigGroup group(m_config, s_waydroidGamingGroup);
+    group.writeEntry(s_gameShellPackagesKey, packages, KConfigGroup::Notify);
+    m_config->sync();
+
+    m_gameShellPackages = packages;
+    Q_EMIT gameShellPackagesChanged();
+}
+
 bool WaydroidDBusClient::uevent() const
 {
     return m_uevent;
 }
 
+QCoro::Task<void> WaydroidDBusClient::setFakeTouchTask(const QString &fakeTouch)
+{
+    if (!m_connected) {
+        co_return;
+    }
+
+    co_await m_interface->setFakeTouch(fakeTouch);
+}
+
+QCoro::QmlTask WaydroidDBusClient::setFakeTouch(const QString &fakeTouch)
+{
+    return setFakeTouchTask(fakeTouch);
+}
+
+QString WaydroidDBusClient::fakeTouch() const
+{
+    return m_fakeTouch;
+}
+
+QCoro::Task<void> WaydroidDBusClient::setFakeWifiTask(const QString &fakeWifi)
+{
+    if (!m_connected) {
+        co_return;
+    }
+
+    co_await m_interface->setFakeWifi(fakeWifi);
+}
+
+QCoro::QmlTask WaydroidDBusClient::setFakeWifi(const QString &fakeWifi)
+{
+    return setFakeWifiTask(fakeWifi);
+}
+
+QString WaydroidDBusClient::fakeWifi() const
+{
+    return m_fakeWifi;
+}
+
+QStringList WaydroidDBusClient::gameShellPackages() const
+{
+    return m_gameShellPackages;
+}
+
 QCoro::Task<void> WaydroidDBusClient::initializeTask(const SystemType systemType, const RomType romType, const bool forced)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->initialize(systemType, romType, forced);
 }
 
@@ -218,6 +448,10 @@ QCoro::QmlTask WaydroidDBusClient::initialize(const SystemType systemType, const
 
 QCoro::Task<void> WaydroidDBusClient::startSessionTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->startSession();
 }
 
@@ -228,6 +462,10 @@ QCoro::QmlTask WaydroidDBusClient::startSession()
 
 QCoro::Task<void> WaydroidDBusClient::stopSessionTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->stopSession();
 }
 
@@ -238,6 +476,10 @@ QCoro::QmlTask WaydroidDBusClient::stopSession()
 
 QCoro::Task<void> WaydroidDBusClient::resetWaydroidTask()
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->resetWaydroid();
 }
 
@@ -248,6 +490,10 @@ QCoro::QmlTask WaydroidDBusClient::resetWaydroid()
 
 QCoro::Task<void> WaydroidDBusClient::installApkTask(const QString apkFile)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->installApk(apkFile);
 }
 
@@ -256,14 +502,46 @@ QCoro::QmlTask WaydroidDBusClient::installApk(const QString apkFile)
     return installApkTask(apkFile);
 }
 
+QCoro::Task<void> WaydroidDBusClient::launchApplicationTask(const QString appId)
+{
+    if (!m_connected) {
+        co_return;
+    }
+
+    co_await m_interface->launchApplication(appId);
+}
+
+QCoro::QmlTask WaydroidDBusClient::launchApplication(const QString appId)
+{
+    return launchApplicationTask(appId);
+}
+
 QCoro::Task<void> WaydroidDBusClient::deleteApplicationTask(const QString appId)
 {
+    if (!m_connected) {
+        co_return;
+    }
+
     co_await m_interface->deleteApplication(appId);
 }
 
 QCoro::QmlTask WaydroidDBusClient::deleteApplication(const QString appId)
 {
     return deleteApplicationTask(appId);
+}
+
+QCoro::Task<void> WaydroidDBusClient::refreshSupportsInfoTask()
+{
+    if (!m_connected) {
+        co_return;
+    }
+
+    co_await m_interface->refreshSupportsInfo();
+}
+
+QCoro::QmlTask WaydroidDBusClient::refreshSupportsInfo()
+{
+    return refreshSupportsInfoTask();
 }
 
 void WaydroidDBusClient::updateStatus()
@@ -275,6 +553,7 @@ void WaydroidDBusClient::updateStatus()
         QDBusPendingReply<int> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch status:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -299,6 +578,7 @@ void WaydroidDBusClient::updateSessionStatus()
         QDBusPendingReply<int> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch sessionStatus:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -323,6 +603,7 @@ void WaydroidDBusClient::updateSystemType()
         QDBusPendingReply<int> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch systemType:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -347,6 +628,7 @@ void WaydroidDBusClient::updateIpAddress()
         QDBusPendingReply<QString> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch ipAddress:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -371,6 +653,7 @@ void WaydroidDBusClient::updateAndroidId()
         QDBusPendingReply<QString> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch androidId:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -395,6 +678,7 @@ void WaydroidDBusClient::updateMultiWindows()
         QDBusPendingReply<bool> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch multiWindows:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -419,6 +703,7 @@ void WaydroidDBusClient::updateSuspend()
         QDBusPendingReply<bool> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch suspend:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -443,6 +728,7 @@ void WaydroidDBusClient::updateUevent()
         QDBusPendingReply<bool> reply = *watcher;
         if (!reply.isValid()) {
             qDebug() << "WaydroidDBusClient: Failed to fetch uevent:" << reply.error().message();
+            handleUnavailableReply();
             watcher->deleteLater();
             return;
         }
@@ -458,7 +744,72 @@ void WaydroidDBusClient::updateUevent()
     });
 }
 
+void WaydroidDBusClient::updateFakeTouch()
+{
+    auto reply = m_interface->fakeTouch();
+    auto watcher = new QDBusPendingCallWatcher(reply, this);
+
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](auto watcher) {
+        QDBusPendingReply<QString> reply = *watcher;
+        if (!reply.isValid()) {
+            qDebug() << "WaydroidDBusClient: Failed to fetch fakeTouch:" << reply.error().message();
+            handleUnavailableReply();
+            watcher->deleteLater();
+            return;
+        }
+
+        const QString fakeTouch = reply.argumentAt<0>();
+
+        if (m_fakeTouch != fakeTouch) {
+            m_fakeTouch = fakeTouch;
+            Q_EMIT fakeTouchChanged();
+        }
+
+        watcher->deleteLater();
+    });
+}
+
+void WaydroidDBusClient::updateFakeWifi()
+{
+    auto reply = m_interface->fakeWifi();
+    auto watcher = new QDBusPendingCallWatcher(reply, this);
+
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](auto watcher) {
+        QDBusPendingReply<QString> reply = *watcher;
+        if (!reply.isValid()) {
+            qDebug() << "WaydroidDBusClient: Failed to fetch fakeWifi:" << reply.error().message();
+            handleUnavailableReply();
+            watcher->deleteLater();
+            return;
+        }
+
+        const QString fakeWifi = reply.argumentAt<0>();
+
+        if (m_fakeWifi != fakeWifi) {
+            m_fakeWifi = fakeWifi;
+            Q_EMIT fakeWifiChanged();
+        }
+
+        watcher->deleteLater();
+    });
+}
+
 void WaydroidDBusClient::copyToClipboard(const QString text)
 {
     qGuiApp->clipboard()->setText(text);
+}
+
+void WaydroidDBusClient::reloadGameShellPackages()
+{
+    const KConfigGroup group(m_config, s_waydroidGamingGroup);
+    QStringList packages = group.readEntry(s_gameShellPackagesKey, QStringList{});
+    packages.removeDuplicates();
+    packages.sort();
+
+    if (m_gameShellPackages == packages) {
+        return;
+    }
+
+    m_gameShellPackages = packages;
+    Q_EMIT gameShellPackagesChanged();
 }

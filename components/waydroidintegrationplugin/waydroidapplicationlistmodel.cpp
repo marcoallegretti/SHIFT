@@ -35,6 +35,17 @@ void WaydroidApplicationListModel::initializeApplications(const QList<QDBusObjec
     endResetModel();
 }
 
+void WaydroidApplicationListModel::clearApplications()
+{
+    if (m_applications.isEmpty()) {
+        return;
+    }
+
+    beginResetModel();
+    m_applications.clear();
+    endResetModel();
+}
+
 void WaydroidApplicationListModel::addApplication(const QDBusObjectPath &objectPath)
 {
     beginInsertRows({}, m_applications.size(), m_applications.size());

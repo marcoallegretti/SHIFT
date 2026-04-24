@@ -29,7 +29,9 @@ KCM.SimpleKCM {
     }
 
     WaydroidLoader {
-        visible: AIP.WaydroidDBusClient.androidId === ""
+        visible: AIP.WaydroidDBusClient.status === AIP.WaydroidDBusClient.Initialized
+                 && AIP.WaydroidDBusClient.androidId === ""
+                 && !inlineMessage.visible
         text: i18n("Fetching your Android ID.\nIt can take a few seconds.")
     }
 
@@ -53,7 +55,8 @@ KCM.SimpleKCM {
     }
 
     ColumnLayout {
-        visible: AIP.WaydroidDBusClient.androidId !== ""
+        visible: AIP.WaydroidDBusClient.status === AIP.WaydroidDBusClient.Initialized
+                 && AIP.WaydroidDBusClient.androidId !== ""
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent
         anchors.leftMargin: Kirigami.Units.largeSpacing
@@ -74,6 +77,24 @@ KCM.SimpleKCM {
                 AIP.WaydroidDBusClient.copyToClipboard(AIP.WaydroidDBusClient.androidId)
                 Qt.openUrlExternally("https://www.google.com/android/uncertified")
             }
+        }
+    }
+
+    ColumnLayout {
+        visible: AIP.WaydroidDBusClient.status !== AIP.WaydroidDBusClient.Initialized
+        anchors.centerIn: parent
+        spacing: Kirigami.Units.largeSpacing
+
+        QQC2.Label {
+            text: i18n("Waydroid is unavailable")
+            Layout.alignment: Qt.AlignHCenter
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        QQC2.Button {
+            text: i18n("Check again")
+            Layout.alignment: Qt.AlignHCenter
+            onClicked: AIP.WaydroidDBusClient.refreshSupportsInfo()
         }
     }
 }

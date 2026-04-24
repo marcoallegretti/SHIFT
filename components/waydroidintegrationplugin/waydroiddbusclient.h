@@ -10,8 +10,12 @@
 #include "waydroidapplicationlistmodel.h"
 #include "waydroiddbusobject.h"
 
+#include <KConfigWatcher>
+#include <KSharedConfig>
+
 #include <QCoroCore>
 #include <QCoroQmlTask>
+#include <QDBusPendingCallWatcher>
 #include <QDBusServiceWatcher>
 #include <QObject>
 #include <QString>
@@ -32,6 +36,9 @@ class WaydroidDBusClient : public QObject
     Q_PROPERTY(bool multiWindows READ multiWindows WRITE setMultiWindows NOTIFY multiWindowsChanged)
     Q_PROPERTY(bool suspend READ suspend WRITE setSuspend NOTIFY suspendChanged)
     Q_PROPERTY(bool uevent READ uevent WRITE setUevent NOTIFY ueventChanged)
+    Q_PROPERTY(QString fakeTouch READ fakeTouch WRITE setFakeTouch NOTIFY fakeTouchChanged)
+    Q_PROPERTY(QString fakeWifi READ fakeWifi WRITE setFakeWifi NOTIFY fakeWifiChanged)
+    Q_PROPERTY(QStringList gameShellPackages READ gameShellPackages NOTIFY gameShellPackagesChanged)
     Q_PROPERTY(WaydroidApplicationListModel *applicationListModel READ applicationListModel CONSTANT)
 
 public:
@@ -98,16 +105,25 @@ public:
     QCoro::QmlTask setSuspend(const bool suspend);
     [[nodiscard]] bool uevent() const;
     QCoro::QmlTask setUevent(const bool uevent);
+    [[nodiscard]] QString fakeTouch() const;
+    QCoro::QmlTask setFakeTouch(const QString &fakeTouch);
+    [[nodiscard]] QString fakeWifi() const;
+    QCoro::QmlTask setFakeWifi(const QString &fakeWifi);
+    [[nodiscard]] QStringList gameShellPackages() const;
 
     Q_INVOKABLE QCoro::QmlTask initialize(const SystemType systemType, const RomType romType, const bool forced = false);
     Q_INVOKABLE QCoro::QmlTask startSession();
     Q_INVOKABLE QCoro::QmlTask stopSession();
     Q_INVOKABLE QCoro::QmlTask resetWaydroid();
     Q_INVOKABLE QCoro::QmlTask installApk(const QString apkFile);
+    Q_INVOKABLE QCoro::QmlTask launchApplication(const QString appId);
     Q_INVOKABLE QCoro::QmlTask deleteApplication(const QString appId);
+    Q_INVOKABLE QCoro::QmlTask refreshSupportsInfo();
     Q_INVOKABLE QCoro::QmlTask refreshSessionInfo();
     Q_INVOKABLE QCoro::QmlTask refreshAndroidId();
     Q_INVOKABLE QCoro::QmlTask refreshApplications();
+    Q_INVOKABLE bool gameShellEnabledForPackage(const QString &packageName) const;
+    Q_INVOKABLE void setGameShellEnabledForPackage(const QString &packageName, bool enabled);
 
     Q_INVOKABLE void copyToClipboard(const QString text);
 
@@ -122,6 +138,9 @@ Q_SIGNALS:
     void multiWindowsChanged();
     void suspendChanged();
     void ueventChanged();
+    void fakeTouchChanged();
+    void fakeWifiChanged();
+    void gameShellPackagesChanged();
 
     void actionFinished(const QString message);
     void actionFailed(const QString message);
@@ -136,12 +155,14 @@ private Q_SLOTS:
     void updateMultiWindows();
     void updateSuspend();
     void updateUevent();
+    void updateFakeTouch();
+    void updateFakeWifi();
 
 private:
     OrgKdePlasmashellWaydroidInterface *m_interface;
     QDBusServiceWatcher *m_watcher;
 
-    Status m_status{NotInitialized};
+    Status m_status{NotSupported};
     SessionStatus m_sessionStatus{SessionStopped};
     SystemType m_systemType{UnknownSystemType};
     QString m_ipAddress{""};
@@ -152,22 +173,40 @@ private:
     bool m_multiWindows{false};
     bool m_suspend{false};
     bool m_uevent{false};
+    QString m_fakeTouch;
+    QString m_fakeWifi;
+    KSharedConfig::Ptr m_config;
+    KConfigWatcher::Ptr m_configWatcher;
+    QStringList m_gameShellPackages;
 
     bool m_connected{false};
+    bool m_signalsConnected{false};
+    bool m_connectionCheckPending{false};
 
     void connectSignals();
     void initializeApplicationListModel();
+    void checkWaydroidObject();
+    void handleUnavailableReply();
+    void onWaydroidObjectCheckFinished(QDBusPendingCallWatcher *watcher);
+    void resetState();
+    void scheduleWaydroidObjectCheck();
 
     QCoro::Task<void> initializeTask(const SystemType systemType, const RomType romType, const bool forced = false);
     QCoro::Task<void> startSessionTask();
     QCoro::Task<void> stopSessionTask();
     QCoro::Task<void> resetWaydroidTask();
     QCoro::Task<void> installApkTask(const QString apkFile);
+    QCoro::Task<void> launchApplicationTask(const QString appId);
     QCoro::Task<void> deleteApplicationTask(const QString appId);
+    QCoro::Task<void> refreshSupportsInfoTask();
     QCoro::Task<void> setMultiWindowsTask(const bool multiWindows);
     QCoro::Task<void> setSuspendTask(const bool suspend);
     QCoro::Task<void> setUeventTask(const bool uevent);
+    QCoro::Task<void> setFakeTouchTask(const QString &fakeTouch);
+    QCoro::Task<void> setFakeWifiTask(const QString &fakeWifi);
     QCoro::Task<void> refreshSessionInfoTask();
     QCoro::Task<void> refreshAndroidIdTask();
     QCoro::Task<void> refreshApplicationsTask();
+
+    void reloadGameShellPackages();
 };

@@ -15,6 +15,13 @@ import org.kde.plasma.private.mobileshell.waydroidintegrationplugin as AIP
 ColumnLayout {
     id: root
 
+    visible: AIP.WaydroidDBusClient.status === AIP.WaydroidDBusClient.Initialized
+             && AIP.WaydroidDBusClient.sessionStatus === AIP.WaydroidDBusClient.SessionRunning
+
+    function packagePatternSummary(value: string): string {
+        return value === "" ? i18n("Not set") : value
+    }
+
     FormCard.FormHeader {
         title: i18n("General information")
     }
@@ -64,6 +71,64 @@ ColumnLayout {
             standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
 
             onAccepted: AIP.WaydroidDBusClient.resetWaydroid()
+        }
+
+        Kirigami.PromptDialog {
+            id: fakeTouchDialog
+            title: i18n("Touch input override")
+            standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+
+            onOpened: {
+                fakeTouchField.text = AIP.WaydroidDBusClient.fakeTouch
+                fakeTouchField.forceActiveFocus()
+            }
+
+            onAccepted: AIP.WaydroidDBusClient.fakeTouch = fakeTouchField.text.trim()
+
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: i18n("Comma-separated package names for apps where mouse input should be interpreted as touch. Supports * wildcards. Leave empty to clear the override.")
+                }
+
+                QQC2.TextField {
+                    id: fakeTouchField
+                    Layout.fillWidth: true
+                    placeholderText: "com.rovio.*"
+                }
+            }
+        }
+
+        Kirigami.PromptDialog {
+            id: fakeWifiDialog
+            title: i18n("Wi-Fi override")
+            standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+
+            onOpened: {
+                fakeWifiField.text = AIP.WaydroidDBusClient.fakeWifi
+                fakeWifiField.forceActiveFocus()
+            }
+
+            onAccepted: AIP.WaydroidDBusClient.fakeWifi = fakeWifiField.text.trim()
+
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: i18n("Comma-separated package names for apps that should always appear to be on Wi-Fi. Supports * wildcards. Leave empty to clear the override.")
+                }
+
+                QQC2.TextField {
+                    id: fakeWifiField
+                    Layout.fillWidth: true
+                    placeholderText: "com.gameloft.*"
+                }
+            }
         }
 
     }
@@ -138,6 +203,30 @@ ColumnLayout {
             onToggled: {
                 AIP.WaydroidDBusClient.uevent = checked
                 infoMessage.visible = true
+            }
+        }
+
+        FormCard.FormDelegateSeparator { above: uevent; below: fakeTouch }
+
+        FormCard.FormTextDelegate {
+            id: fakeTouch
+            text: i18n("Touch input override")
+            description: root.packagePatternSummary(AIP.WaydroidDBusClient.fakeTouch)
+            trailing: PC3.Button {
+                text: i18n("Edit")
+                onClicked: fakeTouchDialog.open()
+            }
+        }
+
+        FormCard.FormDelegateSeparator { above: fakeTouch; below: fakeWifi }
+
+        FormCard.FormTextDelegate {
+            id: fakeWifi
+            text: i18n("Wi-Fi override")
+            description: root.packagePatternSummary(AIP.WaydroidDBusClient.fakeWifi)
+            trailing: PC3.Button {
+                text: i18n("Edit")
+                onClicked: fakeWifiDialog.open()
             }
         }
     }
