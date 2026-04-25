@@ -505,7 +505,45 @@ Item {
                         id: overlaySwitch
                         text: i18n("Perf Overlay")
                         checked: GamingShell.GameLauncherProvider.overlayEnabled
+                        enabled: GamingShell.GameLauncherProvider.mangohudAvailable
+                        opacity: enabled ? 1.0 : 0.5
                         onToggled: GamingShell.GameLauncherProvider.overlayEnabled = checked
+
+                        QQC2.ToolTip.visible: !GamingShell.GameLauncherProvider.mangohudAvailable && hovered
+                        QQC2.ToolTip.text: i18n("MangoHud is not installed")
+                        QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    }
+
+                    // FPS cap — spans both columns, driven by MangoHud fps_limit
+                    QQC2.ButtonGroup { id: fpsCap; exclusive: true }
+
+                    RowLayout {
+                        Layout.columnSpan: 2
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+                        enabled: GamingShell.GameLauncherProvider.mangohudAvailable
+                        opacity: enabled ? 1.0 : 0.5
+
+                        PC3.Label { text: i18n("FPS Cap") }
+                        Item { Layout.fillWidth: true }
+
+                        Repeater {
+                            model: [
+                                { label: i18nc("@action:button FPS cap off", "Off"), fps: 0 },
+                                { label: "30", fps: 30 },
+                                { label: "40", fps: 40 },
+                                { label: "60", fps: 60 }
+                            ]
+                            delegate: QQC2.Button {
+                                required property var modelData
+                                text: modelData.label
+                                flat: true
+                                checkable: true
+                                checked: GamingShell.GameLauncherProvider.fpsLimit === modelData.fps
+                                QQC2.ButtonGroup.group: fpsCap
+                                onClicked: GamingShell.GameLauncherProvider.fpsLimit = modelData.fps
+                            }
+                        }
                     }
 
                     // GameMode status (auto-managed, read-only indicator)

@@ -18,7 +18,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocale>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -28,6 +30,8 @@
 #include <memory>
 
 static const QString s_recentGroup = QStringLiteral("GamingRecentlyPlayed");
+static const QString s_pinnedGroup = QStringLiteral("GamingPinned");
+static const QString s_perGameGroup = QStringLiteral("GamingPerGame");
 static const QString s_waydroidGamingGroup = QStringLiteral("WaydroidGaming");
 static const QString s_gameShellPackagesKey = QStringLiteral("gameShellPackages");
 
@@ -266,6 +270,9 @@ GameLauncherProvider::GameLauncherProvider(QObject *parent)
     m_pendingLaunchTimer.setInterval(15000);
     m_pendingLaunchTimer.setSingleShot(true);
     connect(&m_pendingLaunchTimer, &QTimer::timeout, this, &GameLauncherProvider::clearPendingLaunch);
+    m_mangohudPath = QStandardPaths::findExecutable(QStringLiteral("mangohud"));
+    m_mangohudAvailable = !m_mangohudPath.isEmpty();
+    loadPinnedGames();
     refresh();
 }
 
@@ -291,10 +298,16 @@ QVariant GameLauncherProvider::data(const QModelIndex &index, int role) const
         return g.storageId;
     case LaunchCommandRole:
         return g.launchCommand;
+    case LaunchMethodRole:
+        return launchMethodForEntry(g);
     case ArtworkRole:
         return g.artwork;
+    case LastPlayedTextRole:
+        return formatLastPlayed(g.lastPlayed);
     case InstalledRole:
         return g.installed;
+    case PinnedRole:
+        return m_pinnedGames.contains(g.storageId);
     }
     return {};
 }
@@ -307,8 +320,11 @@ QHash<int, QByteArray> GameLauncherProvider::roleNames() const
         {SourceRole, "source"},
         {StorageIdRole, "storageId"},
         {LaunchCommandRole, "launchCommand"},
+        {LaunchMethodRole, "launchMethod"},
         {ArtworkRole, "artwork"},
+        {LastPlayedTextRole, "lastPlayedText"},
         {InstalledRole, "installed"},
+        {PinnedRole, "pinned"},
     };
 }
 
@@ -391,15 +407,94 @@ void GameLauncherProvider::launchByStorageId(const QString &storageId)
     }
 }
 
+QVariantMap GameLauncherProvider::gameDetails(const QString &storageId) const
+{
+    const int entryIndex = findEntryIndexByStorageId(storageId);
+    if (entryIndex < 0) {
+        return {};
+    }
+
+    const auto &entry = m_allGames.at(entryIndex);
+    return {
+        {QStringLiteral("name"), entry.name},
+        {QStringLiteral("icon"), entry.icon},
+        {QStringLiteral("source"), entry.source},
+        {QStringLiteral("storageId"), entry.storageId},
+        {QStringLiteral("launchMethod"), launchMethodForEntry(entry)},
+        {QStringLiteral("artwork"), entry.artwork},
+        {QStringLiteral("lastPlayedText"), formatLastPlayed(entry.lastPlayed)},
+        {QStringLiteral("installed"), entry.installed},
+        {QStringLiteral("pinned"), m_pinnedGames.contains(entry.storageId)},
+        {QStringLiteral("perGameFpsLimit"), perGameFpsLimit(entry.storageId)},
+        {QStringLiteral("perGameOverlayState"), perGameOverlayState(entry.storageId)},
+    };
+}
+
+bool GameLauncherProvider::openSourceApp(const QString &source)
+{
+    QString program;
+    QString displayName;
+
+    if (source == QLatin1String("steam")) {
+        program = QStringLiteral("steam");
+        displayName = QStringLiteral("Steam");
+    } else if (source == QLatin1String("lutris")) {
+        program = QStringLiteral("lutris");
+        displayName = QStringLiteral("Lutris");
+    } else if (source == QLatin1String("heroic")) {
+        program = QStringLiteral("heroic");
+        displayName = QStringLiteral("Heroic");
+    } else {
+        return false;
+    }
+
+    clearLastLaunchError();
+
+    if (!QProcess::startDetached(program, {})) {
+        markLaunchFailed(displayName, QStringLiteral("Unable to start %1").arg(program));
+        return false;
+    }
+
+    return true;
+}
+
 void GameLauncherProvider::launchEntry(GameEntry &entry)
 {
     clearLastLaunchError();
+
+    const KConfigGroup pgParent(m_config.data(), s_perGameGroup);
+    const KConfigGroup pgGroup(&pgParent, entry.storageId);
+    const int pgFpsLimit = pgGroup.readEntry("fpsLimit", -1);
+    const int pgOverlayState = pgGroup.readEntry("overlayState", -1);
+    const int effectiveFps = (pgFpsLimit >= 0) ? pgFpsLimit : m_fpsLimit;
+    const bool effectiveOverlay = (pgOverlayState >= 0) ? (pgOverlayState == 1) : m_overlayEnabled;
 
     if (entry.source == QLatin1String("desktop") || entry.source == QLatin1String("waydroid")) {
         auto service = KService::serviceByStorageId(entry.storageId);
         if (!service) {
             markLaunchFailed(entry.name, QStringLiteral("Desktop entry is no longer available"));
             return;
+        }
+
+        // Wrap native desktop entries with mangohud when overlay or FPS cap is active.
+        // Waydroid (Android) games don't benefit from it, so skip them.
+        if (entry.source == QLatin1String("desktop") && m_mangohudAvailable && (effectiveOverlay || effectiveFps > 0)) {
+            QString exec = service->exec();
+            // Strip KDE .desktop field-code placeholders (%u, %U, %f, %F, %i, %c, %k …)
+            exec.remove(QRegularExpression(QStringLiteral("%[a-zA-Z]")));
+            KShell::Errors parseError = KShell::NoError;
+            QStringList parts = KShell::splitArgs(exec.simplified(), KShell::NoOptions, &parseError);
+            if (parseError == KShell::NoError && !parts.isEmpty()) {
+                const QString program = parts.takeFirst();
+                qint64 pid = 0;
+                if (launchWithMangohud(program, parts, effectiveOverlay, effectiveFps, &pid)) {
+                    markLaunchSucceeded(entry.storageId, entry.name);
+                } else {
+                    markLaunchFailed(entry.name, QStringLiteral("Failed to launch %1 with mangohud").arg(program));
+                }
+                return;
+            }
+            // Exec parsing failed — fall through to the standard KIO job without overlay.
         }
 
         auto *job = new KIO::ApplicationLauncherJob(service);
@@ -426,7 +521,13 @@ void GameLauncherProvider::launchEntry(GameEntry &entry)
         }
 
         QString program = parts.takeFirst();
-        if (!QProcess::startDetached(program, parts)) {
+        if (m_mangohudAvailable && (effectiveOverlay || effectiveFps > 0)) {
+            qint64 pid = 0;
+            if (!launchWithMangohud(program, parts, effectiveOverlay, effectiveFps, &pid)) {
+                markLaunchFailed(entry.name, QStringLiteral("Unable to start %1 with mangohud").arg(program));
+                return;
+            }
+        } else if (!QProcess::startDetached(program, parts)) {
             markLaunchFailed(entry.name, QStringLiteral("Unable to start %1").arg(program));
             return;
         }
@@ -818,6 +919,46 @@ bool GameLauncherProvider::overlayEnabled() const
     return m_overlayEnabled;
 }
 
+bool GameLauncherProvider::mangohudAvailable() const
+{
+    return m_mangohudAvailable;
+}
+
+int GameLauncherProvider::fpsLimit() const
+{
+    return m_fpsLimit;
+}
+
+void GameLauncherProvider::setFpsLimit(int limit)
+{
+    if (m_fpsLimit == limit) {
+        return;
+    }
+    m_fpsLimit = limit;
+    Q_EMIT fpsLimitChanged();
+}
+
+bool GameLauncherProvider::launchWithMangohud(const QString &program, const QStringList &args, bool overlayEnabled, int fpsLimit, qint64 *pid)
+{
+    QStringList config;
+    if (!overlayEnabled) {
+        config << QStringLiteral("no_display");
+    }
+    if (fpsLimit > 0) {
+        config << QStringLiteral("fps_limit=%1").arg(fpsLimit);
+    }
+
+    QProcess proc;
+    if (!config.isEmpty()) {
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert(QStringLiteral("MANGOHUD_CONFIG"), config.join(QLatin1Char(',')));
+        proc.setProcessEnvironment(env);
+    }
+    proc.setProgram(m_mangohudPath);
+    proc.setArguments(QStringList{program} + args);
+    return proc.startDetached(pid);
+}
+
 void GameLauncherProvider::setOverlayEnabled(bool enabled)
 {
     if (m_overlayEnabled == enabled) {
@@ -825,15 +966,6 @@ void GameLauncherProvider::setOverlayEnabled(bool enabled)
     }
     m_overlayEnabled = enabled;
     Q_EMIT overlayEnabledChanged();
-
-    // Set/unset MangoHud environment variables for child processes
-    if (enabled) {
-        qputenv("MANGOHUD", "1");
-        qputenv("MANGOHUD_DLSYM", "1");
-    } else {
-        qunsetenv("MANGOHUD");
-        qunsetenv("MANGOHUD_DLSYM");
-    }
 }
 
 void GameLauncherProvider::applyFilter()
@@ -850,6 +982,10 @@ void GameLauncherProvider::applyFilter()
         }
         m_games.append(g);
     }
+
+    std::stable_sort(m_games.begin(), m_games.end(), [this](const GameEntry &a, const GameEntry &b) {
+        return m_pinnedGames.contains(a.storageId) > m_pinnedGames.contains(b.storageId);
+    });
 
     endResetModel();
     Q_EMIT countChanged();
@@ -871,6 +1007,129 @@ void GameLauncherProvider::saveRecentTimestamp(const QString &storageId, const Q
     KConfigGroup group(m_config, s_recentGroup);
     group.writeEntry(storageId, when);
     group.sync();
+}
+
+void GameLauncherProvider::loadPinnedGames()
+{
+    const KConfigGroup group(m_config, s_pinnedGroup);
+    const QStringList list = group.readEntry(QStringLiteral("pinned"), QStringList{});
+    m_pinnedGames = QSet<QString>(list.begin(), list.end());
+}
+
+void GameLauncherProvider::togglePin(const QString &storageId)
+{
+    if (storageId.isEmpty()) {
+        return;
+    }
+    if (m_pinnedGames.contains(storageId)) {
+        m_pinnedGames.remove(storageId);
+    } else {
+        m_pinnedGames.insert(storageId);
+    }
+    KConfigGroup group(m_config, s_pinnedGroup);
+    group.writeEntry(QStringLiteral("pinned"), QStringList(m_pinnedGames.begin(), m_pinnedGames.end()));
+    group.sync();
+    applyFilter();
+}
+
+int GameLauncherProvider::perGameFpsLimit(const QString &storageId) const
+{
+    const KConfigGroup parent(m_config.data(), s_perGameGroup);
+    const KConfigGroup group(&parent, storageId);
+    return group.readEntry("fpsLimit", -1);
+}
+
+void GameLauncherProvider::setPerGameFpsLimit(const QString &storageId, int limit)
+{
+    if (storageId.isEmpty()) {
+        return;
+    }
+    KConfigGroup parent(m_config.data(), s_perGameGroup);
+    KConfigGroup group(&parent, storageId);
+    if (limit < 0) {
+        group.deleteEntry("fpsLimit");
+    } else {
+        group.writeEntry("fpsLimit", limit);
+    }
+    group.sync();
+}
+
+int GameLauncherProvider::perGameOverlayState(const QString &storageId) const
+{
+    const KConfigGroup parent(m_config.data(), s_perGameGroup);
+    const KConfigGroup group(&parent, storageId);
+    return group.readEntry("overlayState", -1);
+}
+
+void GameLauncherProvider::setPerGameOverlayState(const QString &storageId, int state)
+{
+    if (storageId.isEmpty()) {
+        return;
+    }
+    KConfigGroup parent(m_config.data(), s_perGameGroup);
+    KConfigGroup group(&parent, storageId);
+    if (state < 0) {
+        group.deleteEntry("overlayState");
+    } else {
+        group.writeEntry("overlayState", state);
+    }
+    group.sync();
+}
+
+void GameLauncherProvider::clearLastPlayed(const QString &storageId)
+{
+    if (storageId.isEmpty()) {
+        return;
+    }
+
+    KConfigGroup group(m_config, s_recentGroup);
+    if (!group.hasKey(storageId)) {
+        return;
+    }
+    group.deleteEntry(storageId);
+    group.sync();
+
+    const int entryIndex = findEntryIndexByStorageId(storageId);
+    if (entryIndex >= 0) {
+        m_allGames[entryIndex].lastPlayed = QDateTime();
+        const int filteredIndex = [&] {
+            for (int i = 0; i < m_games.size(); ++i) {
+                if (m_games.at(i).storageId == storageId) {
+                    return i;
+                }
+            }
+            return -1;
+        }();
+        if (filteredIndex >= 0) {
+            m_games[filteredIndex].lastPlayed = QDateTime();
+            const QModelIndex idx = index(filteredIndex);
+            Q_EMIT dataChanged(idx, idx, {LastPlayedTextRole});
+        }
+    }
+
+    Q_EMIT recentGamesChanged();
+}
+
+QString GameLauncherProvider::launchMethodForEntry(const GameEntry &entry) const
+{
+    if (entry.source == QLatin1String("desktop") || entry.source == QLatin1String("waydroid")) {
+        return QStringLiteral("desktop-entry");
+    }
+
+    if (entry.launchCommand.contains(QStringLiteral("://"))) {
+        return QStringLiteral("protocol");
+    }
+
+    return QStringLiteral("command");
+}
+
+QString GameLauncherProvider::formatLastPlayed(const QDateTime &when) const
+{
+    if (!when.isValid()) {
+        return {};
+    }
+
+    return QLocale().toString(when, QLocale::ShortFormat);
 }
 
 void GameLauncherProvider::clearPendingLaunch()
@@ -917,6 +1176,7 @@ void GameLauncherProvider::markLaunchSucceeded(const QString &storageId, const Q
 
     setPendingLaunch(name);
     Q_EMIT gameLaunched(name);
+    Q_EMIT recentGamesChanged();
 }
 
 void GameLauncherProvider::markLaunchFailed(const QString &name, const QString &error)

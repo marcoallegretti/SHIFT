@@ -6,8 +6,10 @@
 #include <QAbstractListModel>
 #include <QDateTime>
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QTimer>
+#include <QVariantMap>
 #include <qqmlregistration.h>
 
 #include <KConfigWatcher>
@@ -24,6 +26,8 @@ class GameLauncherProvider : public QAbstractListModel
     Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
     Q_PROPERTY(QString sourceFilter READ sourceFilter WRITE setSourceFilter NOTIFY sourceFilterChanged)
     Q_PROPERTY(bool overlayEnabled READ overlayEnabled WRITE setOverlayEnabled NOTIFY overlayEnabledChanged)
+    Q_PROPERTY(bool mangohudAvailable READ mangohudAvailable NOTIFY mangohudAvailableChanged)
+    Q_PROPERTY(int fpsLimit READ fpsLimit WRITE setFpsLimit NOTIFY fpsLimitChanged)
     Q_PROPERTY(bool launchPending READ launchPending NOTIFY launchPendingChanged)
     Q_PROPERTY(QString pendingLaunchName READ pendingLaunchName NOTIFY launchPendingChanged)
     Q_PROPERTY(QString lastLaunchError READ lastLaunchError NOTIFY lastLaunchErrorChanged)
@@ -37,8 +41,11 @@ public:
         SourceRole, // "desktop", "waydroid", "steam", "flatpak"
         StorageIdRole, // .desktop file name or launch URI
         LaunchCommandRole,
+        LaunchMethodRole,
         ArtworkRole, // path to banner/grid image (empty if none)
+        LastPlayedTextRole,
         InstalledRole,
+        PinnedRole,
     };
     Q_ENUM(Roles)
 
@@ -54,6 +61,9 @@ public:
     void setSourceFilter(const QString &source);
     bool overlayEnabled() const;
     void setOverlayEnabled(bool enabled);
+    bool mangohudAvailable() const;
+    int fpsLimit() const;
+    void setFpsLimit(int limit);
     bool launchPending() const;
     QString pendingLaunchName() const;
     QString lastLaunchError() const;
@@ -61,9 +71,17 @@ public:
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void launch(int index);
     Q_INVOKABLE void launchByStorageId(const QString &storageId);
+    Q_INVOKABLE QVariantMap gameDetails(const QString &storageId) const;
+    Q_INVOKABLE bool openSourceApp(const QString &source);
+    Q_INVOKABLE void clearLastPlayed(const QString &storageId);
     Q_INVOKABLE QVariantList recentGames(int limit = 5) const;
     Q_INVOKABLE void clearPendingLaunch();
     Q_INVOKABLE void clearLastLaunchError();
+    Q_INVOKABLE void togglePin(const QString &storageId);
+    Q_INVOKABLE int perGameFpsLimit(const QString &storageId) const;
+    Q_INVOKABLE void setPerGameFpsLimit(const QString &storageId, int limit);
+    Q_INVOKABLE int perGameOverlayState(const QString &storageId) const;
+    Q_INVOKABLE void setPerGameOverlayState(const QString &storageId, int state);
 
 Q_SIGNALS:
     void countChanged();
@@ -71,10 +89,13 @@ Q_SIGNALS:
     void filterStringChanged();
     void sourceFilterChanged();
     void overlayEnabledChanged();
+    void mangohudAvailableChanged();
+    void fpsLimitChanged();
     void launchPendingChanged();
     void lastLaunchErrorChanged();
     void gameLaunched(const QString &name);
     void gameLaunchFailed(const QString &name, const QString &error);
+    void recentGamesChanged();
 
 private:
     struct GameEntry {
@@ -98,12 +119,16 @@ private:
     void saveRecentTimestamp(const QString &storageId, const QDateTime &when);
     void applyFilter();
     void launchEntry(GameEntry &entry);
+    bool launchWithMangohud(const QString &program, const QStringList &args, bool overlayEnabled, int fpsLimit, qint64 *pid = nullptr);
+    QString launchMethodForEntry(const GameEntry &entry) const;
+    QString formatLastPlayed(const QDateTime &when) const;
     // Returns the current m_allGames index for the storage id.
     // Callers must re-lookup after any mutation that can rebuild or reorder the list.
     int findEntryIndexByStorageId(const QString &storageId) const;
     void markLaunchSucceeded(const QString &storageId, const QString &name);
     void markLaunchFailed(const QString &name, const QString &error);
     void setPendingLaunch(const QString &name);
+    void loadPinnedGames();
 
     QList<GameEntry> m_allGames;
     QList<GameEntry> m_games; // filtered view
@@ -112,6 +137,10 @@ private:
     KSharedConfigPtr m_config;
     bool m_loading = false;
     bool m_overlayEnabled = false;
+    int m_fpsLimit = 0;
+    bool m_mangohudAvailable = false;
+    QString m_mangohudPath;
+    QSet<QString> m_pinnedGames;
     bool m_launchPending = false;
     QString m_pendingLaunchName;
     QString m_lastLaunchError;
