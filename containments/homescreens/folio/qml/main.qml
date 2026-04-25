@@ -758,11 +758,17 @@ ContainmentItem {
     // the user return to the Game Center after launching a game.
     // Keep the Loader active for the full duration of gaming mode so the
     // opacity Behavior in GamingHUD can animate both fade-in and fade-out.
+    //
+    // Hide the HUD while a game window covers the screen. A mapped LayerShell
+    // surface prevents KWin from using DRM direct scanout for the fullscreen
+    // game window. Setting showing=false triggers the opacity fade-out and then
+    // sets visible=false, which unmaps the Wayland surface and lets KWin bypass
+    // the compositor render loop entirely for the game frame.
     Loader {
         active: ShellSettings.Settings.gamingModeEnabled
         sourceComponent: GamingHUD {
             visible: showing
-            showing: !root.gameCenterOpen
+            showing: !root.gameCenterOpen && !windowMaximizedTracker.showingWindow
             onOpenRequested: root.gameCenterOpen = true
         }
     }
