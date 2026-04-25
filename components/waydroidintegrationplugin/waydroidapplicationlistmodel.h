@@ -33,6 +33,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     void initializeApplications(const QList<QDBusObjectPath> &applicationObjectPaths);
+    void clearApplications();
 
 public Q_SLOTS:
     void addApplication(const QDBusObjectPath &objectPath);

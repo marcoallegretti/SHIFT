@@ -16,6 +16,7 @@ import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
 import org.kde.plasma.private.mobileshell.windowplugin as WindowPlugin
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+import org.kde.plasma.private.mobileshell.gamingshellplugin as GamingShell
 
 import org.kde.layershell 1.0 as LayerShell
 import org.kde.plasma.private.sessions 2.0
@@ -25,13 +26,84 @@ import org.kde.kirigamiaddons.components as KirigamiAddonsComponents
 
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
+import "./gaming"
+
 import "./private"
 
 ContainmentItem {
     id: root
     property Folio.HomeScreen folio: root.plasmoid
 
+    // Tracks whether the Game Center grid is visible within gaming mode.
+    // If gaming mode is already enabled at startup, open it immediately so
+    // the user is never left without controls.
+    property bool gameCenterOpen: ShellSettings.Settings.gamingModeEnabled
+    property bool showGameCenterHint: false
+
+    // State saved when gaming mode activates, restored when it deactivates
+    property string _savedPowerProfile: ""
+    property bool _savedDnd: false
+    property bool _gamingSessionActive: false
+
+    function _applyGamingModeState(enabled) {
+        root.gameCenterOpen = enabled
+        GamingShell.GamepadManager.active = enabled
+
+        if (enabled === root._gamingSessionActive) {
+            return
+        }
+
+        if (enabled) {
+            // Save current state and apply gaming optimizations
+            root._savedDnd = MobileShellState.ShellDBusClient.doNotDisturb
+            MobileShellState.ShellDBusClient.doNotDisturb = true
+
+            if (GamingShell.PowerProfileControl.available) {
+                root._savedPowerProfile = GamingShell.PowerProfileControl.activeProfile
+                GamingShell.PowerProfileControl.activeProfile = "performance"
+            }
+
+            GamingShell.GameModeControl.requestStart()
+            root._gamingSessionActive = true
+        } else {
+            // Restore previous state
+            MobileShellState.ShellDBusClient.doNotDisturb = root._savedDnd
+
+            if (GamingShell.PowerProfileControl.available && root._savedPowerProfile.length > 0) {
+                GamingShell.PowerProfileControl.activeProfile = root._savedPowerProfile
+            }
+
+            GamingShell.GameModeControl.requestEnd()
+            root._gamingSessionActive = false
+        }
+    }
+
+    Timer {
+        id: gameCenterHintTimer
+        interval: 2600
+        onTriggered: root.showGameCenterHint = false
+    }
+
+    Connections {
+        target: ShellSettings.Settings
+        function onGamingModeEnabledChanged() {
+            root._applyGamingModeState(ShellSettings.Settings.gamingModeEnabled)
+        }
+    }
+
+    // Gamepad Guide button toggles Game Center overlay
+    Connections {
+        target: GamingShell.GamepadManager
+        enabled: ShellSettings.Settings.gamingModeEnabled
+        function onButtonPressed(button, gamepadIndex) {
+            if (button === GamingShell.GamepadManager.ButtonGuide) {
+                root.gameCenterOpen = !root.gameCenterOpen
+            }
+        }
+    }
+
     Component.onCompleted: {
+        root._applyGamingModeState(ShellSettings.Settings.gamingModeEnabled)
         folio.FolioSettings.load();
         folio.FavouritesModel.load();
         folio.PageListModel.load();
@@ -71,6 +143,18 @@ ContainmentItem {
         screenGeometry: Plasmoid.containment.screenGeometry
     }
 
+    // In gaming mode, reopen Game Center when the last window goes away
+    // so the user is never stranded on a bare wallpaper.
+    Connections {
+        target: windowMaximizedTracker
+        enabled: ShellSettings.Settings.gamingModeEnabled
+        function onShowingWindowChanged() {
+            if (!windowMaximizedTracker.showingWindow && !root.gameCenterOpen) {
+                root.gameCenterOpen = true
+            }
+        }
+    }
+
     // Close app drawer when a new window appears
     Connections {
         target: WindowPlugin.WindowUtil
@@ -87,6 +171,12 @@ ContainmentItem {
         // Always close action drawer
         if (MobileShellState.ShellDBusClient.isActionDrawerOpen) {
             MobileShellState.ShellDBusClient.closeActionDrawer();
+        }
+
+        if (ShellSettings.Settings.gamingModeEnabled) {
+            // In gaming mode Home/Menu should reopen the Game Center overlay.
+            root.gameCenterOpen = true;
+            return;
         }
 
         if (ShellSettings.Settings.convergenceModeEnabled) {
@@ -186,7 +276,7 @@ ContainmentItem {
     // task panel containment; this window only provides the visible dock.
     Window {
         id: dockOverlay
-        visible: ShellSettings.Settings.convergenceModeEnabled
+        visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
         color: "transparent"
         width: Screen.width
         height: Kirigami.Units.gridUnit * 3
@@ -286,6 +376,7 @@ ContainmentItem {
     Window {
         id: drawerOverlay
         visible: ShellSettings.Settings.convergenceModeEnabled
+                 && !ShellSettings.Settings.gamingModeEnabled
                  && folio.HomeScreenState.appDrawerOpenProgress > 0
         color: "transparent"
         width: Screen.width
@@ -642,6 +733,74 @@ ContainmentItem {
                     }
                 }
             }
+        }
+    }
+
+    // Game Center overlay — full-screen grid of games shown when gaming mode
+    // is active.  Sits at LayerTop so it covers running application windows
+    // without going above system notifications.
+    GameCenterOverlay {
+        id: gameCenterOverlay
+        folio: root.folio
+        visible: ShellSettings.Settings.gamingModeEnabled && root.gameCenterOpen
+
+        onGameStarted: root.gameCenterOpen = false
+        onDismissRequested: {
+            root.gameCenterOpen = false
+            if (ShellSettings.Settings.gamingDismissHintEnabled) {
+                root.showGameCenterHint = true
+                gameCenterHintTimer.restart()
+            }
+        }
+    }
+
+    // Small persistent button at the top-right corner of the screen that lets
+    // the user return to the Game Center after launching a game.
+    // Keep the Loader active for the full duration of gaming mode so the
+    // opacity Behavior in GamingHUD can animate both fade-in and fade-out.
+    //
+    // Hide the HUD while a game window covers the screen. A mapped LayerShell
+    // surface prevents KWin from using DRM direct scanout for the fullscreen
+    // game window. Setting showing=false triggers the opacity fade-out and then
+    // sets visible=false, which unmaps the Wayland surface and lets KWin bypass
+    // the compositor render loop entirely for the game frame.
+    Loader {
+        active: ShellSettings.Settings.gamingModeEnabled
+        sourceComponent: GamingHUD {
+            visible: showing
+            showing: !root.gameCenterOpen && !windowMaximizedTracker.showingWindow
+            onOpenRequested: root.gameCenterOpen = true
+        }
+    }
+
+    Rectangle {
+        id: gameCenterHint
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Kirigami.Units.gridUnit * 2
+        visible: root.showGameCenterHint && ShellSettings.Settings.gamingDismissHintEnabled
+        opacity: visible ? 1 : 0
+        z: 2000
+        radius: Kirigami.Units.cornerRadius
+        color: Qt.rgba(0, 0, 0, 0.65)
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.2)
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
+
+        implicitWidth: hintText.implicitWidth + Kirigami.Units.gridUnit * 2
+        implicitHeight: hintText.implicitHeight + Kirigami.Units.largeSpacing
+
+        PlasmaComponents.Label {
+            id: hintText
+            anchors.centerIn: parent
+            text: i18n("Gaming mode is still on. Use Home or the gamepad icon to reopen Game Center.")
+            color: "white"
+            wrapMode: Text.WordWrap
+            width: Math.min(root.width * 0.8, Kirigami.Units.gridUnit * 30)
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 

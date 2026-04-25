@@ -11,9 +11,9 @@ Loader {
 
     property var currentWindow
 
-    // Window that needs geometry clamping after un-maximize in convergence
-    // mode.  Set in onMaximizedChanged and consumed by the timer below.
-    property var pendingConstrainWindow: null
+    // Windows awaiting geometry clamping after un-maximize in convergence
+    // mode.  Using an array so concurrent un-maximizes are not lost.
+    property var pendingConstrainWindows: []
 
     // After a window is un-maximized in convergence mode, the dockSpaceReserver
     // LayerShell surface needs one Wayland roundtrip to (re)commit its exclusive
@@ -24,27 +24,30 @@ Loader {
         id: constrainAfterRestoreTimer
         interval: 200
         onTriggered: {
-            const window = root.pendingConstrainWindow
-            root.pendingConstrainWindow = null
-            if (!window || window.deleted || !window.normalWindow) return
-            if (!ShellSettings.Settings.convergenceModeEnabled) return
+            const windows = root.pendingConstrainWindows.slice()
+            root.pendingConstrainWindows = []
+            for (const window of windows) {
+                if (!window || window.deleted || !window.normalWindow) continue
+                if (!ShellSettings.Settings.convergenceModeEnabled) continue
+                if (ShellSettings.Settings.gamingModeEnabled) continue
 
-            const output = window.output
-            const desktop = window.desktops[0]
-            if (!output) return
-            if (!desktop) return
+                const output = window.output
+                const desktop = window.desktops[0]
+                if (!output) continue
+                if (!desktop) continue
 
-            const maxRect = KWinComponents.Workspace.clientArea(
-                KWinComponents.Workspace.MaximizeArea, output, desktop)
-            const geo = window.frameGeometry
-            const maxBottom = maxRect.y + maxRect.height
+                const maxRect = KWinComponents.Workspace.clientArea(
+                    KWinComponents.Workspace.MaximizeArea, output, desktop)
+                const geo = window.frameGeometry
+                const maxBottom = maxRect.y + maxRect.height
 
-            if (geo.y + geo.height > maxBottom) {
-                // Clip the bottom edge to MaximizeArea; preserve top position
-                // and width.  Ensure height is at least 100px to avoid
-                // pathological cases where the window starts above maxRect.
-                const newH = Math.max(100, maxBottom - geo.y)
-                window.frameGeometry = Qt.rect(geo.x, geo.y, geo.width, newH)
+                if (geo.y + geo.height > maxBottom) {
+                    // Clip the bottom edge to MaximizeArea; preserve top position
+                    // and width.  Ensure height is at least 100px to avoid
+                    // pathological cases where the window starts above maxRect.
+                    const newH = Math.max(100, maxBottom - geo.y)
+                    window.frameGeometry = Qt.rect(geo.x, geo.y, geo.width, newH)
+                }
             }
         }
     }
@@ -57,6 +60,12 @@ Loader {
         }
 
         if (!window.normalWindow) {
+            return;
+        }
+
+        if (ShellSettings.Settings.gamingModeEnabled) {
+            window.noBorder = true;
+            window.setMaximize(true, true);
             return;
         }
 
@@ -91,6 +100,9 @@ Loader {
         target: currentWindow
 
         function onFullScreenChanged() {
+            if (!currentWindow) {
+                return;
+            }
             currentWindow.interactiveMoveResizeFinished.connect((currentWindow) => {
                 root.run(currentWindow);
             });
@@ -98,6 +110,9 @@ Loader {
         }
 
         function onMaximizedChanged() {
+            if (!currentWindow) {
+                return;
+            }
             if (!currentWindow.maximizable) {
                 return;
             }
@@ -110,7 +125,7 @@ Loader {
             // zone is re-committed over a Wayland roundtrip.
             if (ShellSettings.Settings.convergenceModeEnabled
                     && ShellSettings.Settings.autoHidePanelsEnabled) {
-                root.pendingConstrainWindow = currentWindow
+                root.pendingConstrainWindows.push(currentWindow)
                 constrainAfterRestoreTimer.restart()
             }
         }
@@ -128,12 +143,25 @@ Loader {
                 }
             }
         }
+
+        function onGamingModeEnabledChanged() {
+            const windows = KWinComponents.Workspace.windows;
+
+            for (let i = 0; i < windows.length; i++) {
+                if (windows[i].normalWindow) {
+                    root.run(windows[i]);
+                }
+            }
+        }
     }
 
     Connections {
         target: KWinComponents.Workspace
 
         function onWindowAdded(window) {
+            if (!window) {
+                return;
+            }
             if (window.normalWindow) {
                 window.interactiveMoveResizeFinished.connect((window) => {
                     root.run(window);
@@ -143,6 +171,9 @@ Loader {
         }
 
         function onWindowActivated(window) {
+            if (!window) {
+                return;
+            }
             if (window.normalWindow) {
                 currentWindow = window;
                 window.interactiveMoveResizeFinished.connect((window) => {

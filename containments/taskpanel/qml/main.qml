@@ -38,12 +38,14 @@ ContainmentItem {
 
     readonly property bool inLandscape: MobileShell.Constants.navigationPanelOnSide(Screen.width, Screen.height)
 
-    readonly property real navigationPanelHeight: MobileShell.Constants.navigationPanelThickness
+    readonly property bool gamingMode: ShellSettings.Settings.gamingModeEnabled
+
+    readonly property real navigationPanelHeight: gamingMode ? 0 : MobileShell.Constants.navigationPanelThickness
     onNavigationPanelHeightChanged: setWindowProperties()
 
     readonly property real intendedWindowThickness: navigationPanelHeight
     readonly property real intendedWindowLength: inLandscape ? Screen.height : Screen.width
-    readonly property real intendedWindowOffset: inLandscape ? MobileShell.Constants.topPanelHeight : 0; // offset for top panel
+    readonly property real intendedWindowOffset: (inLandscape && !gamingMode) ? MobileShell.Constants.topPanelHeight : 0; // offset for top panel
     readonly property int intendedWindowLocation: inLandscape ? PlasmaCore.Types.RightEdge : PlasmaCore.Types.BottomEdge
 
     onIntendedWindowLengthChanged: maximizeTimer.restart() // ensure it always takes up the full length of the screen
@@ -136,6 +138,11 @@ ContainmentItem {
         function onConvergenceModeEnabledChanged() {
             root.setWindowProperties();
         }
+
+        function onGamingModeEnabledChanged() {
+            root.setWindowProperties();
+            navigationPanel.offset = ShellSettings.Settings.gamingModeEnabled ? MobileShell.Constants.navigationPanelThickness : 0;
+        }
     }
 
     Component.onCompleted: setWindowProperties();
@@ -153,18 +160,19 @@ ContainmentItem {
     Window {
         id: dockSpaceReserver
         visible: ShellSettings.Settings.convergenceModeEnabled
+                 && !ShellSettings.Settings.gamingModeEnabled
                  && !(ShellSettings.Settings.autoHidePanelsEnabled
                       && windowMaximizedTracker.showingWindow)
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.WindowTransparentForInput
         // height is set by layer-shell anchoring; provide a fallback.
-        height: Kirigami.Units.gridUnit * 3
+        height: Math.max(1, MobileShell.Constants.navigationPanelThickness)
         width: 1 // layer-shell stretches it via AnchorLeft|AnchorRight
 
         LayerShell.Window.scope: "dock-space"
         LayerShell.Window.layer: LayerShell.Window.LayerBottom
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: Kirigami.Units.gridUnit * 3
+        LayerShell.Window.exclusionZone: Math.max(1, MobileShell.Constants.navigationPanelThickness)
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
     }
 
@@ -177,7 +185,9 @@ ContainmentItem {
         return (windowMaximizedTracker.showingWindow || isCurrentWindowFullscreen) && !showingStartupFeedback
     }
     readonly property alias isCurrentWindowFullscreen: windowMaximizedTracker.isCurrentWindowFullscreen
-    readonly property bool fullscreen: isCurrentWindowFullscreen || (ShellSettings.Settings.autoHidePanelsEnabled && opaqueBar)
+    readonly property bool fullscreen: ShellSettings.Settings.gamingModeEnabled
+                                     || isCurrentWindowFullscreen
+                                     || (ShellSettings.Settings.autoHidePanelsEnabled && opaqueBar)
 
     WindowPlugin.WindowMaximizedTracker {
         id: windowMaximizedTracker
@@ -205,6 +215,7 @@ ContainmentItem {
 
     Item {
         id: navigationPanel
+        visible: !ShellSettings.Settings.gamingModeEnabled
         anchors.fill: parent
 
         property real offset: 0

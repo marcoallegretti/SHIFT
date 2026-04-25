@@ -29,14 +29,14 @@ KCM.SimpleKCM {
         spacing: Kirigami.Units.largeSpacing
 
         QQC2.Label {
-            text: i18n("Waydroid is not installed")
+            text: i18n("Waydroid is unavailable")
             Layout.alignment: Qt.AlignHCenter
             horizontalAlignment: Text.AlignHCenter
 
         }
 
         PC3.Button {
-            text: i18n("Check installation")
+            text: i18n("Check again")
             Layout.alignment: Qt.AlignHCenter
             onClicked: AIP.WaydroidDBusClient.refreshSupportsInfo()
         }

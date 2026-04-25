@@ -96,6 +96,8 @@ Q_SIGNALS:
     Q_SCRIPTABLE void multiWindowsChanged();
     Q_SCRIPTABLE void suspendChanged();
     Q_SCRIPTABLE void ueventChanged();
+    Q_SCRIPTABLE void fakeTouchChanged();
+    Q_SCRIPTABLE void fakeWifiChanged();
 
     Q_SCRIPTABLE void applicationAdded(QDBusObjectPath path);
     Q_SCRIPTABLE void applicationRemoved(QDBusObjectPath path);
@@ -119,6 +121,10 @@ public Q_SLOTS:
     Q_SCRIPTABLE void setSuspend(const bool suspend);
     Q_SCRIPTABLE bool uevent() const;
     Q_SCRIPTABLE void setUevent(const bool uevent);
+    Q_SCRIPTABLE QString fakeTouch() const;
+    Q_SCRIPTABLE void setFakeTouch(const QString &fakeTouch);
+    Q_SCRIPTABLE QString fakeWifi() const;
+    Q_SCRIPTABLE void setFakeWifi(const QString &fakeWifi);
     Q_SCRIPTABLE QList<QDBusObjectPath> applications() const;
 
     Q_SCRIPTABLE void initialize(const int systemType, const int romType, const bool forced = false);
@@ -126,7 +132,9 @@ public Q_SLOTS:
     Q_SCRIPTABLE void stopSession();
     Q_SCRIPTABLE void resetWaydroid();
     Q_SCRIPTABLE void installApk(const QString apkFile);
+    Q_SCRIPTABLE void launchApplication(const QString appId);
     Q_SCRIPTABLE void deleteApplication(const QString appId);
+    Q_SCRIPTABLE void refreshSupportsInfo();
     Q_SCRIPTABLE void refreshSessionInfo();
     Q_SCRIPTABLE void refreshAndroidId();
     Q_SCRIPTABLE void refreshApplications();
@@ -143,8 +151,9 @@ private:
     bool m_multiWindows{false};
     bool m_suspend{false};
     bool m_uevent{false};
+    QString m_fakeTouch;
+    QString m_fakeWifi;
 
-    void refreshSupportsInfo();
     void refreshInstallationInfo();
     QCoro::Task<void> refreshPropsInfo();
 

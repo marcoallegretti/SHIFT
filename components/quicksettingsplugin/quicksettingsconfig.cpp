@@ -45,6 +45,8 @@ QList<QString> QuickSettingsConfig::enabledQuickSettings() const
                                           QStringLiteral("org.kde.plasma.quicksetting.screenshot"),
                                           QStringLiteral("org.kde.plasma.quicksetting.powermenu"),
                                           QStringLiteral("org.kde.plasma.quicksetting.donotdisturb"),
+                                          QStringLiteral("org.kde.plasma.quicksetting.gaming"),
+                                          QStringLiteral("org.kde.plasma.quicksetting.gaminghint"),
                                           QStringLiteral("org.kde.plasma.quicksetting.caffeine"),
                                           QStringLiteral("org.kde.plasma.quicksetting.keyboardtoggle"),
                                           QStringLiteral("org.kde.plasma.quicksetting.hotspot")});

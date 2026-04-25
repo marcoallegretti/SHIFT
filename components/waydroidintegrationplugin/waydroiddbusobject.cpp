@@ -31,6 +31,8 @@ using namespace Qt::StringLiterals;
 #define MULTI_WINDOWS_PROP_KEY "persist.waydroid.multi_windows"
 #define SUSPEND_PROP_KEY "persist.waydroid.suspend"
 #define UEVENT_PROP_KEY "persist.waydroid.uevent"
+#define FAKE_TOUCH_PROP_KEY "persist.waydroid.fake_touch"
+#define FAKE_WIFI_PROP_KEY "persist.waydroid.fake_wifi"
 
 static const QRegularExpression sessionRegExp(u"Session:\\s*(\\w+)"_s);
 static const QRegularExpression ipAddressRegExp(u"IP address:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)"_s);
@@ -179,10 +181,12 @@ void WaydroidDBusObject::stopSession()
 
     connect(process, &QProcess::finished, this, [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
         Q_UNUSED(exitStatus);
+        const QByteArray errorLog = process->readAllStandardError();
         process->deleteLater();
 
-        if (exitCode == 0) {
-            qCWarning(WAYDROIDINTEGRATIONPLUGIN) << "Failed to stop the Waydroid session: " << process->readAllStandardError();
+        if (exitCode != 0) {
+            Q_EMIT errorOccurred(i18n("Failed to stop the Waydroid session."), QString::fromUtf8(errorLog));
+            qCWarning(WAYDROIDINTEGRATIONPLUGIN) << "Failed to stop the Waydroid session: " << errorLog;
             return;
         }
 
@@ -244,6 +248,27 @@ void WaydroidDBusObject::installApk(const QString apkFile)
         } else {
             Q_EMIT actionFailed(i18n("Installation Failed"));
             qCWarning(WAYDROIDINTEGRATIONPLUGIN) << "Error occurred during installation of " << apkFile << ": " << process->readAllStandardError();
+        }
+    });
+
+    process->start(WAYDROID_COMMAND, arguments);
+}
+
+void WaydroidDBusObject::launchApplication(const QString appId)
+{
+    const QStringList arguments{u"app"_s, u"launch"_s, appId};
+
+    QProcess *process = new QProcess(this);
+
+    connect(process, &QProcess::finished, this, [this, appId, process](int exitCode, QProcess::ExitStatus exitStatus) {
+        const QByteArray errorLog = process->readAllStandardError();
+        process->deleteLater();
+
+        if (exitCode == 0 && exitStatus == QProcess::NormalExit) {
+            Q_EMIT actionFinished(i18n("Application has been launched"));
+        } else {
+            Q_EMIT actionFailed(i18n("Application launch failed"));
+            qCWarning(WAYDROIDINTEGRATIONPLUGIN) << "Error occurred while launching " << appId << ": " << errorLog;
         }
     });
 
@@ -373,6 +398,52 @@ void WaydroidDBusObject::setUevent(const bool uevent)
         }
     };
     coro(this, value, uevent);
+}
+
+QString WaydroidDBusObject::fakeTouch() const
+{
+    return m_fakeTouch;
+}
+
+void WaydroidDBusObject::setFakeTouch(const QString &fakeTouch)
+{
+    if (m_fakeTouch == fakeTouch) {
+        return;
+    }
+
+    auto coro = [](WaydroidDBusObject *self, QString fakeTouch) -> QCoro::Task<void> {
+        QPointer<WaydroidDBusObject> guard(self);
+        if (co_await self->writePropValue(FAKE_TOUCH_PROP_KEY, fakeTouch)) {
+            if (guard) {
+                self->m_fakeTouch = fakeTouch;
+                Q_EMIT self->fakeTouchChanged();
+            }
+        }
+    };
+    coro(this, fakeTouch);
+}
+
+QString WaydroidDBusObject::fakeWifi() const
+{
+    return m_fakeWifi;
+}
+
+void WaydroidDBusObject::setFakeWifi(const QString &fakeWifi)
+{
+    if (m_fakeWifi == fakeWifi) {
+        return;
+    }
+
+    auto coro = [](WaydroidDBusObject *self, QString fakeWifi) -> QCoro::Task<void> {
+        QPointer<WaydroidDBusObject> guard(self);
+        if (co_await self->writePropValue(FAKE_WIFI_PROP_KEY, fakeWifi)) {
+            if (guard) {
+                self->m_fakeWifi = fakeWifi;
+                Q_EMIT self->fakeWifiChanged();
+            }
+        }
+    };
+    coro(this, fakeWifi);
 }
 
 QList<QDBusObjectPath> WaydroidDBusObject::applications() const
@@ -513,6 +584,7 @@ void WaydroidDBusObject::refreshAndroidId()
             }
         } else {
             m_androidId = "";
+            Q_EMIT actionFailed(i18n("Failed to fetch Android ID"));
             qCWarning(WAYDROIDINTEGRATIONPLUGIN) << "KAuth returned an error code:" << executeJob->error();
         }
 
@@ -539,6 +611,12 @@ QCoro::Task<void> WaydroidDBusObject::refreshPropsInfo()
     const QString ueventPropValue = co_await fetchPropValue(UEVENT_PROP_KEY, "false");
     m_uevent = ueventPropValue == "true";
     Q_EMIT ueventChanged();
+
+    m_fakeTouch = co_await fetchPropValue(FAKE_TOUCH_PROP_KEY, QString{});
+    Q_EMIT fakeTouchChanged();
+
+    m_fakeWifi = co_await fetchPropValue(FAKE_WIFI_PROP_KEY, QString{});
+    Q_EMIT fakeWifiChanged();
 }
 
 QCoro::Task<QString> WaydroidDBusObject::fetchPropValue(const QString key, const QString defaultValue)

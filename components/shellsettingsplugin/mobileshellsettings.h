@@ -52,6 +52,10 @@ class MobileShellSettings : public QObject
     // Auto Hide Panels
     Q_PROPERTY(bool autoHidePanelsEnabled READ autoHidePanelsEnabled WRITE setAutoHidePanelsEnabled NOTIFY autoHidePanelsEnabledChanged)
 
+    // Gaming mode
+    Q_PROPERTY(bool gamingModeEnabled READ gamingModeEnabled WRITE setGamingModeEnabled NOTIFY gamingModeEnabledChanged)
+    Q_PROPERTY(bool gamingDismissHintEnabled READ gamingDismissHintEnabled WRITE setGamingDismissHintEnabled NOTIFY gamingDismissHintEnabledChanged)
+
     // logout dialog
     Q_PROPERTY(bool allowLogout READ allowLogout READ allowLogout NOTIFY allowLogoutChanged)
 
@@ -264,6 +268,12 @@ public:
      */
     void setAutoHidePanelsEnabled(bool enabled);
 
+    bool gamingModeEnabled() const;
+    void setGamingModeEnabled(bool enabled);
+
+    bool gamingDismissHintEnabled() const;
+    void setGamingDismissHintEnabled(bool enabled);
+
     /**
      * Whether logout button is shown in the logout/shutdown dialog.
      */
@@ -310,6 +320,8 @@ Q_SIGNALS:
     void quickSettingsColumnsChanged();
     void convergenceModeEnabledChanged();
     void autoHidePanelsEnabledChanged();
+    void gamingModeEnabledChanged();
+    void gamingDismissHintEnabledChanged();
     void allowLogoutChanged();
     void lockscreenLeftButtonActionChanged();
     void lockscreenRightButtonActionChanged();

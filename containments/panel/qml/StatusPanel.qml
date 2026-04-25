@@ -131,6 +131,7 @@ Item {
         context: Qt.ApplicationShortcut
         onActivated: {
             if (drawer.actionDrawer.intendedToBeVisible) {
+                drawer.actionDrawer.intendedToBeVisible = false;
                 drawer.actionDrawer.close();
             } else {
                 drawer.actionDrawer.openToPinnedMode = false;

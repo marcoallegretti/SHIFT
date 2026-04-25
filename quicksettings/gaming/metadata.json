@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "mightymarco4@gmail.com",
+                "Name": "Marco Allegretti"
+            }
+        ],
+        "Description": "Quick setting to toggle gaming mode for Plasma Mobile",
+        "Icon": "input-gaming",
+        "Id": "org.kde.plasma.quicksetting.gaming",
+        "License": "EUPL-1.2",
+        "Name": "Gaming Mode",
+        "Version": "0.1",
+        "Website": ""
+    }
+}

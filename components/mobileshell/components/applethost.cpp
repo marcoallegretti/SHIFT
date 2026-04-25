@@ -86,12 +86,14 @@ QQuickItem *AppletHost::fullRepresentationFor(const QString &pluginId)
 
     m_containment->addApplet(applet);
     auto *item = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
-    m_items.insert(pluginId, item);
 
     if (!item) {
         qWarning() << "AppletHost: no AppletQuickItem for" << pluginId;
+        applet->deleteLater();
         return nullptr;
     }
+
+    m_items.insert(pluginId, item);
 
     item->setPreloadFullRepresentation(true);
 
