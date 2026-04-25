@@ -12,7 +12,7 @@ QS.QuickSetting {
     id: root
 
     text: i18n("Gaming Mode")
-    icon: "input-gaming"
+    icon: "input-gamepad"
     status: enabled ? i18n("Active") : i18n("Inactive")
     enabled: ShellSettings.Settings.gamingModeEnabled
 
