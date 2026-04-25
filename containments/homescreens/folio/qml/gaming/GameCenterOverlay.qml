@@ -23,6 +23,8 @@ Window {
 
     required property var folio
     property int launchTaskBaseline: 0
+    property var selectedGame: ({})
+    property int recentRevision: 0
 
     signal gameStarted()
     signal dismissRequested()
@@ -62,6 +64,88 @@ Window {
         GamingShell.GameLauncherProvider.launchByStorageId(storageId)
     }
 
+    function openGameDetails(storageId) {
+        selectedGame = GamingShell.GameLauncherProvider.gameDetails(storageId)
+        if (!selectedGame.storageId || selectedGame.storageId.length === 0) {
+            selectedGame = ({})
+            return
+        }
+        gameDetailsDialog.active = true
+        gameDetailsDialog.item.open()
+    }
+
+    function focusRecentGames() {
+        if (recentList.count <= 0) {
+            return
+        }
+        if (recentList.currentIndex < 0) {
+            recentList.currentIndex = 0
+        }
+        recentList.forceActiveFocus()
+    }
+
+    function sourceDescription(source) {
+        switch (source) {
+        case "steam":
+            return i18n("Launches through the Steam protocol handler.")
+        case "lutris":
+            return i18n("Launches through the Lutris launcher.")
+        case "heroic":
+            return i18n("Launches through Heroic's protocol handler.")
+        case "waydroid":
+            return i18n("Launches through the exported Waydroid desktop entry.")
+        case "flatpak":
+            return i18n("Launches through its exported desktop entry.")
+        default:
+            return i18n("Launches through its desktop entry.")
+        }
+    }
+
+    function sourceHint(source) {
+        switch (source) {
+        case "waydroid":
+            return i18n("Manage which Android titles appear here from the Waydroid applications page.")
+        case "steam":
+            return i18n("Steam entries come from your local Steam library manifests.")
+        case "lutris":
+            return i18n("Lutris entries come from the local Lutris library database.")
+        case "heroic":
+            return i18n("Heroic entries come from Heroic's local library cache.")
+        default:
+            return i18n("Desktop entries come from the application menu database.")
+        }
+    }
+
+    function launchMethodDescription(method) {
+        switch (method) {
+        case "desktop-entry":
+            return i18n("Desktop entry")
+        case "protocol":
+            return i18n("Protocol handler")
+        case "command":
+            return i18n("Command line")
+        default:
+            return i18n("Unknown")
+        }
+    }
+
+    function canOpenSourceApp(source) {
+        return source === "steam" || source === "lutris" || source === "heroic"
+    }
+
+    function sourceAppActionLabel(source) {
+        switch (source) {
+        case "steam":
+            return i18n("Open Steam")
+        case "lutris":
+            return i18n("Open Lutris")
+        case "heroic":
+            return i18n("Open Heroic")
+        default:
+            return i18n("Open Source App")
+        }
+    }
+
     width: Screen.width
     height: Screen.height
     color: "transparent"
@@ -89,6 +173,10 @@ Window {
 
         function onGameLaunchFailed(name, error) {
             launchErrorTimer.restart()
+        }
+
+        function onRecentGamesChanged() {
+            root.recentRevision++
         }
     }
 
@@ -148,28 +236,52 @@ Window {
             case GamingShell.GamepadManager.ButtonDPadUp:
                 if (grid.activeFocus) {
                     if (grid.currentIndex < grid.columns && runningGames.hasTasks) {
-                        runningGames.focusFirstTask()
+                        if (recentList.count > 0) {
+                            root.focusRecentGames()
+                        } else {
+                            runningGames.focusFirstTask()
+                        }
+                    } else if (grid.currentIndex < grid.columns && recentList.count > 0) {
+                        root.focusRecentGames()
                     } else {
                         grid.moveCurrentIndexUp()
                     }
+                } else if (recentList.activeFocus && runningGames.hasTasks) {
+                    runningGames.focusFirstTask()
                 }
                 break
             case GamingShell.GamepadManager.ButtonDPadDown:
                 if (runningGames.activeFocus) {
+                    if (recentList.count > 0) {
+                        root.focusRecentGames()
+                    } else {
+                        grid.forceActiveFocus()
+                    }
+                } else if (recentList.activeFocus) {
                     grid.forceActiveFocus()
                 } else if (grid.activeFocus) {
                     grid.moveCurrentIndexDown()
                 }
                 break
             case GamingShell.GamepadManager.ButtonDPadLeft:
-                if (grid.activeFocus) grid.moveCurrentIndexLeft()
+                if (recentList.activeFocus) {
+                    recentList.decrementCurrentIndex()
+                } else if (grid.activeFocus) {
+                    grid.moveCurrentIndexLeft()
+                }
                 break
             case GamingShell.GamepadManager.ButtonDPadRight:
-                if (grid.activeFocus) grid.moveCurrentIndexRight()
+                if (recentList.activeFocus) {
+                    recentList.incrementCurrentIndex()
+                } else if (grid.activeFocus) {
+                    grid.moveCurrentIndexRight()
+                }
                 break
             case GamingShell.GamepadManager.ButtonA:
                 if (runningGames.activeFocus) {
                     runningGames.activateCurrent()
+                } else if (recentList.activeFocus && recentList.currentItem) {
+                    root.launchGameByStorageId(recentList.currentItem.storageId)
                 } else if (grid.activeFocus && grid.currentItem) {
                     root.launchGame(grid.currentIndex)
                 }
@@ -177,6 +289,10 @@ Window {
             case GamingShell.GamepadManager.ButtonX:
                 if (runningGames.activeFocus) {
                     runningGames.closeCurrent()
+                } else if (recentList.activeFocus && recentList.currentItem) {
+                    root.openGameDetails(recentList.currentItem.storageId)
+                } else if (grid.activeFocus && grid.currentItem) {
+                    grid.currentItem.showDetails()
                 }
                 break
             case GamingShell.GamepadManager.ButtonB:
@@ -244,20 +360,38 @@ Window {
         if (stickState.leftY < -stickState.deadzone) {
             if (grid.activeFocus) {
                 if (grid.currentIndex < grid.columns && runningGames.hasTasks) {
-                    runningGames.focusFirstTask()
+                    if (recentList.count > 0) {
+                        root.focusRecentGames()
+                    } else {
+                        runningGames.focusFirstTask()
+                    }
+                } else if (grid.currentIndex < grid.columns && recentList.count > 0) {
+                    root.focusRecentGames()
                 } else {
                     grid.moveCurrentIndexUp()
                 }
+            } else if (recentList.activeFocus && runningGames.hasTasks) {
+                runningGames.focusFirstTask()
             }
         } else if (stickState.leftY > stickState.deadzone) {
             if (runningGames.activeFocus) {
+                if (recentList.count > 0) {
+                    root.focusRecentGames()
+                } else {
+                    grid.forceActiveFocus()
+                }
+            } else if (recentList.activeFocus) {
                 grid.forceActiveFocus()
             } else if (grid.activeFocus) {
                 grid.moveCurrentIndexDown()
             }
         }
-        if (stickState.leftX < -stickState.deadzone && grid.activeFocus) {
+        if (stickState.leftX < -stickState.deadzone && recentList.activeFocus) {
+            recentList.decrementCurrentIndex()
+        } else if (stickState.leftX < -stickState.deadzone && grid.activeFocus) {
             grid.moveCurrentIndexLeft()
+        } else if (stickState.leftX > stickState.deadzone && recentList.activeFocus) {
+            recentList.incrementCurrentIndex()
         } else if (stickState.leftX > stickState.deadzone && grid.activeFocus) {
             grid.moveCurrentIndexRight()
         }
@@ -486,20 +620,56 @@ Window {
                     orientation: ListView.Horizontal
                     spacing: Kirigami.Units.largeSpacing
                     clip: true
+                    keyNavigationEnabled: true
 
-                    model: root.visible ? GamingShell.GameLauncherProvider.recentGames(5) : []
+                    model: root.visible ? (root.recentRevision, GamingShell.GameLauncherProvider.recentGames(5)) : []
+
+                    function activateCurrentRecent() {
+                        if (currentItem) {
+                            root.launchGameByStorageId(currentItem.storageId)
+                        }
+                    }
+
+                    function showCurrentRecentDetails() {
+                        if (currentItem) {
+                            root.openGameDetails(currentItem.storageId)
+                        }
+                    }
+
+                    onActiveFocusChanged: {
+                        if (activeFocus && count > 0 && currentIndex < 0) {
+                            currentIndex = 0
+                        }
+                    }
+
+                    Keys.onLeftPressed: decrementCurrentIndex()
+                    Keys.onRightPressed: incrementCurrentIndex()
+                    Keys.onReturnPressed: activateCurrentRecent()
+                    Keys.onEnterPressed: activateCurrentRecent()
+                    Keys.onUpPressed: {
+                        if (runningGames.hasTasks) {
+                            runningGames.focusFirstTask()
+                        }
+                    }
+                    Keys.onDownPressed: grid.forceActiveFocus()
 
                     delegate: QQC2.ItemDelegate {
                         width: Kirigami.Units.gridUnit * 7
                         height: recentList.height
 
                         required property var modelData
+                        readonly property string storageId: modelData.storageId || ""
+                        readonly property bool isCurrent: ListView.isCurrentItem && recentList.activeFocus
 
                         readonly property bool hasArt: modelData.artwork && modelData.artwork.length > 0
 
+                        HoverHandler { id: tileHover }
+
                         background: Rectangle {
                             radius: Kirigami.Units.cornerRadius
-                            color: parent.hovered ? Kirigami.Theme.hoverColor : "transparent"
+                            color: parent.isCurrent
+                                   ? Kirigami.Theme.highlightColor
+                                   : (parent.hovered ? Kirigami.Theme.hoverColor : "transparent")
                         }
 
                         contentItem: ColumnLayout {
@@ -529,10 +699,27 @@ Window {
                                 elide: Text.ElideRight
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.85
+                                color: parent.parent.isCurrent
+                                       ? Kirigami.Theme.highlightedTextColor
+                                       : Kirigami.Theme.textColor
                             }
                         }
 
                         onClicked: root.launchGameByStorageId(modelData.storageId)
+
+                        QQC2.ToolButton {
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: Kirigami.Units.smallSpacing
+                            visible: tileHover.hovered || parent.isCurrent
+                            icon.name: "documentinfo"
+                            display: QQC2.AbstractButton.IconOnly
+
+                            QQC2.ToolTip.visible: hovered
+                            QQC2.ToolTip.text: i18n("Details")
+
+                            onClicked: root.openGameDetails(parent.storageId)
+                        }
                     }
                 }
             }
@@ -647,6 +834,17 @@ Window {
                 }
                 Keys.onEnterPressed: Keys.onReturnPressed(event)
                 Keys.onEscapePressed: root.dismissRequested()
+                Keys.onMenuPressed: {
+                    if (currentIndex >= 0) {
+                        root.openGameDetails(currentItem.storageId)
+                    }
+                }
+                Keys.onPressed: (event) => {
+                    if ((event.key === Qt.Key_I) && currentIndex >= 0) {
+                        root.openGameDetails(currentItem.storageId)
+                        event.accepted = true
+                    }
+                }
 
                 delegate: Item {
                     width: grid.cellWidth
@@ -657,8 +855,19 @@ Window {
                     required property string icon
                     required property string source
                     required property string artwork
+                    required property string storageId
+                    required property string launchMethod
+                    required property string lastPlayedText
+                    required property bool pinned
 
                     readonly property bool hasArt: artwork.length > 0
+                    readonly property bool isCurrent: GridView.isCurrentItem && grid.activeFocus
+
+                    HoverHandler { id: gridTileHover }
+
+                    function showDetails() {
+                        root.openGameDetails(storageId)
+                    }
 
                     QQC2.ItemDelegate {
                         anchors.fill: parent
@@ -793,6 +1002,30 @@ Window {
 
                         onClicked: root.launchGame(index)
                     }
+
+                    QQC2.ToolButton {
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: Kirigami.Units.smallSpacing * 1.5
+                        visible: gridTileHover.hovered
+                        icon.name: "documentinfo"
+                        display: QQC2.AbstractButton.IconOnly
+
+                        QQC2.ToolTip.visible: hovered
+                        QQC2.ToolTip.text: i18n("Details")
+
+                        onClicked: parent.showDetails()
+                    }
+
+                    Kirigami.Icon {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.margins: Kirigami.Units.smallSpacing * 1.5
+                        visible: pinned
+                        source: "starred"
+                        implicitWidth: Kirigami.Units.iconSizes.small
+                        implicitHeight: Kirigami.Units.iconSizes.small
+                    }
                 }
             }
 
@@ -847,13 +1080,17 @@ Window {
 
                 // Gamepad legend
                 PC3.Label {
-                    text: runningGames.hasTasks
+                    text: runningGames.activeFocus
                          ? i18n("%1: Select  %2: Close  %3: Back  %4: Exit  %5: Settings  %6: Search",
                              actionButtonLabel, closeButtonLabel, backButtonLabel, exitButtonLabel,
                              quickSettingsButtonLabel, searchButtonLabel)
-                         : i18n("%1: Select  %2: Back  %3: Exit  %4/%5: Filter  %6: Settings  %7: Search",
-                             actionButtonLabel, backButtonLabel, exitButtonLabel, leftShoulderLabel,
-                             rightShoulderLabel, quickSettingsButtonLabel, searchButtonLabel)
+                         : recentList.activeFocus
+                         ? i18n("%1: Play  %2: Details  %3: Back  %4: Exit  %5: Settings  %6: Search",
+                             actionButtonLabel, closeButtonLabel, backButtonLabel, exitButtonLabel,
+                             quickSettingsButtonLabel, searchButtonLabel)
+                         : i18n("%1: Play  %2: Details  %3: Back  %4: Exit  %5/%6: Filter  %7: Settings  %8: Search",
+                             actionButtonLabel, closeButtonLabel, backButtonLabel, exitButtonLabel,
+                             leftShoulderLabel, rightShoulderLabel, quickSettingsButtonLabel, searchButtonLabel)
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.75
                     opacity: 0.5
                 }
@@ -890,6 +1127,235 @@ Window {
         onRunningChanged: {
             if (running) {
                 launchCurtain.opacity = 1
+            }
+        }
+    }
+
+    Loader {
+        id: gameDetailsDialog
+        active: false
+        anchors.fill: parent
+
+        sourceComponent: Kirigami.PromptDialog {
+            id: theGameDetailsDialog
+            title: root.selectedGame.name || ""
+            subtitle: root.sourceLabel(root.selectedGame.source || "")
+            standardButtons: Kirigami.Dialog.NoButton
+
+            property int pgFpsLimit: root.selectedGame.perGameFpsLimit ?? -1
+            property int pgOverlayState: root.selectedGame.perGameOverlayState ?? -1
+            customFooterActions: [
+                Kirigami.Action {
+                    text: i18n("Close")
+                    onTriggered: theGameDetailsDialog.close()
+                },
+                Kirigami.Action {
+                    visible: root.canOpenSourceApp(root.selectedGame.source || "")
+                    text: root.sourceAppActionLabel(root.selectedGame.source || "")
+                    onTriggered: {
+                        if (GamingShell.GameLauncherProvider.openSourceApp(root.selectedGame.source || "")) {
+                            theGameDetailsDialog.close()
+                            root.gameStarted()
+                        }
+                    }
+                },
+                Kirigami.Action {
+                    text: (root.selectedGame.pinned || false) ? i18n("Unpin") : i18n("Pin to top")
+                    onTriggered: {
+                        GamingShell.GameLauncherProvider.togglePin(root.selectedGame.storageId || "")
+                        theGameDetailsDialog.close()
+                    }
+                },
+                Kirigami.Action {
+                    visible: (root.selectedGame.lastPlayedText || "").length > 0
+                    text: i18n("Remove from Continue Playing")
+                    onTriggered: {
+                        GamingShell.GameLauncherProvider.clearLastPlayed(root.selectedGame.storageId || "")
+                        theGameDetailsDialog.close()
+                    }
+                },
+                Kirigami.Action {
+                    text: i18n("Play")
+                    enabled: (root.selectedGame.storageId || "").length > 0
+                    onTriggered: {
+                        root.launchGameByStorageId(root.selectedGame.storageId)
+                        theGameDetailsDialog.close()
+                    }
+                }
+            ]
+
+            ColumnLayout {
+                spacing: Kirigami.Units.largeSpacing
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.largeSpacing
+
+                    Rectangle {
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 5
+                        Layout.preferredHeight: Kirigami.Units.gridUnit * 7
+                        radius: Kirigami.Units.cornerRadius
+                        clip: true
+                        color: Kirigami.Theme.alternateBackgroundColor
+
+                        Image {
+                            anchors.fill: parent
+                            source: root.selectedGame.artwork && root.selectedGame.artwork.length > 0
+                                ? "file://" + root.selectedGame.artwork : ""
+                            fillMode: Image.PreserveAspectCrop
+                            visible: source.length > 0
+                            asynchronous: true
+                        }
+
+                        Kirigami.Icon {
+                            anchors.centerIn: parent
+                            visible: !parent.children[0].visible
+                            source: root.selectedGame.icon || "games-config-options"
+                            implicitWidth: Kirigami.Units.iconSizes.huge
+                            implicitHeight: Kirigami.Units.iconSizes.huge
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Rectangle {
+                            visible: (root.selectedGame.source || "") !== "desktop"
+                            radius: height / 2
+                            color: root.sourceChipColor(root.selectedGame.source || "")
+                            implicitHeight: sourceBadgeLabel.implicitHeight + Kirigami.Units.smallSpacing
+                            implicitWidth: sourceBadgeLabel.implicitWidth + Kirigami.Units.largeSpacing
+
+                            PC3.Label {
+                                id: sourceBadgeLabel
+                                anchors.centerIn: parent
+                                text: root.sourceLabel(root.selectedGame.source || "")
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize * 0.8
+                                font.weight: Font.DemiBold
+                                color: "white"
+                            }
+                        }
+
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            text: root.sourceDescription(root.selectedGame.source || "")
+                            wrapMode: Text.WordWrap
+                        }
+
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            text: root.sourceHint(root.selectedGame.source || "")
+                            wrapMode: Text.WordWrap
+                            opacity: 0.75
+                        }
+
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Launch method: %1", root.launchMethodDescription(root.selectedGame.launchMethod || ""))
+                            wrapMode: Text.WordWrap
+                            opacity: 0.75
+                        }
+
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            visible: (root.selectedGame.lastPlayedText || "").length > 0
+                            text: i18n("Last played: %1", root.selectedGame.lastPlayedText || "")
+                            wrapMode: Text.WordWrap
+                            opacity: 0.75
+                        }
+
+                        PC3.Label {
+                            Layout.fillWidth: true
+                            text: i18n("Identifier: %1", root.selectedGame.storageId || "")
+                            wrapMode: Text.WrapAnywhere
+                            opacity: 0.6
+                        }
+                    }
+                }
+
+                Kirigami.Separator { Layout.fillWidth: true }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PC3.Label {
+                        text: i18n("FPS Cap")
+                        opacity: 0.75
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    QQC2.ButtonGroup { id: pgFpsCap; exclusive: true }
+
+                    Repeater {
+                        model: [
+                            { label: i18n("Global"), fps: -1 },
+                            { label: i18nc("@action:button FPS cap off", "Off"), fps: 0 },
+                            { label: "30", fps: 30 },
+                            { label: "40", fps: 40 },
+                            { label: "60", fps: 60 }
+                        ]
+                        delegate: QQC2.Button {
+                            required property var modelData
+                            text: modelData.label
+                            flat: true
+                            checkable: true
+                            checked: theGameDetailsDialog.pgFpsLimit === modelData.fps
+                            QQC2.ButtonGroup.group: pgFpsCap
+                            onClicked: {
+                                theGameDetailsDialog.pgFpsLimit = modelData.fps
+                                GamingShell.GameLauncherProvider.setPerGameFpsLimit(
+                                    root.selectedGame.storageId || "", modelData.fps)
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing
+
+                    PC3.Label {
+                        text: i18n("Overlay")
+                        opacity: 0.75
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    QQC2.ButtonGroup { id: pgOverlayGroup; exclusive: true }
+
+                    Repeater {
+                        model: [
+                            { label: i18n("Global"), state: -1 },
+                            { label: i18n("Off"),    state: 0  },
+                            { label: i18n("On"),     state: 1  }
+                        ]
+                        delegate: QQC2.Button {
+                            required property var modelData
+                            text: modelData.label
+                            flat: true
+                            checkable: true
+                            checked: theGameDetailsDialog.pgOverlayState === modelData.state
+                            enabled: modelData.state !== 1 || GamingShell.GameLauncherProvider.mangohudAvailable
+                            opacity: enabled ? 1.0 : 0.5
+                            QQC2.ButtonGroup.group: pgOverlayGroup
+                            onClicked: {
+                                theGameDetailsDialog.pgOverlayState = modelData.state
+                                GamingShell.GameLauncherProvider.setPerGameOverlayState(
+                                    root.selectedGame.storageId || "", modelData.state)
+                            }
+                        }
+                    }
+                }
+            }
+
+            onClosed: {
+                gameDetailsDialog.active = false
+                root.selectedGame = ({})
             }
         }
     }
