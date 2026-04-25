@@ -304,8 +304,6 @@ QVariant GameLauncherProvider::data(const QModelIndex &index, int role) const
         return g.artwork;
     case LastPlayedTextRole:
         return formatLastPlayed(g.lastPlayed);
-    case InstalledRole:
-        return g.installed;
     case PinnedRole:
         return m_pinnedGames.contains(g.storageId);
     }
@@ -323,7 +321,6 @@ QHash<int, QByteArray> GameLauncherProvider::roleNames() const
         {LaunchMethodRole, "launchMethod"},
         {ArtworkRole, "artwork"},
         {LastPlayedTextRole, "lastPlayedText"},
-        {InstalledRole, "installed"},
         {PinnedRole, "pinned"},
     };
 }
@@ -362,7 +359,6 @@ void GameLauncherProvider::refresh()
 
     loadDesktopGames();
     loadSteamGames();
-    loadFlatpakGames();
     loadLutrisGames();
     loadHeroicGames();
     loadRecentTimestamps();
@@ -423,7 +419,6 @@ QVariantMap GameLauncherProvider::gameDetails(const QString &storageId) const
         {QStringLiteral("launchMethod"), launchMethodForEntry(entry)},
         {QStringLiteral("artwork"), entry.artwork},
         {QStringLiteral("lastPlayedText"), formatLastPlayed(entry.lastPlayed)},
-        {QStringLiteral("installed"), entry.installed},
         {QStringLiteral("pinned"), m_pinnedGames.contains(entry.storageId)},
         {QStringLiteral("perGameFpsLimit"), perGameFpsLimit(entry.storageId)},
         {QStringLiteral("perGameOverlayState"), perGameOverlayState(entry.storageId)},
@@ -593,7 +588,6 @@ void GameLauncherProvider::loadDesktopGames()
         entry.source = isWaydroidApp ? QStringLiteral("waydroid") : QStringLiteral("desktop");
         entry.storageId = service->storageId();
         entry.launchCommand = service->exec();
-        entry.installed = true;
         m_allGames.append(entry);
     }
 }
@@ -682,7 +676,6 @@ void GameLauncherProvider::loadSteamGames()
             entry.source = QStringLiteral("steam");
             entry.storageId = QStringLiteral("steam://rungameid/") + appId;
             entry.launchCommand = QStringLiteral("steam steam://rungameid/") + appId;
-            entry.installed = true;
 
             // Check for grid artwork
             for (const auto &root : steamRoots) {
@@ -706,17 +699,6 @@ void GameLauncherProvider::loadSteamGames()
             m_allGames.append(entry);
         }
     }
-}
-
-// --- Flatpak games (non-Steam) ---
-
-void GameLauncherProvider::loadFlatpakGames()
-{
-    // Flatpak games that export .desktop files with Game category
-    // are already picked up by loadDesktopGames() via KService.
-    // This method is a hook for future Flatpak-specific enrichment
-    // (e.g. querying flatpak metadata for games that don't set
-    // the Game category properly).
 }
 
 // --- Lutris library (SQLite) ---
@@ -767,7 +749,6 @@ void GameLauncherProvider::loadLutrisGames()
             entry.storageId = QStringLiteral("lutris:%1").arg(slug);
             entry.icon = QStringLiteral("lutris");
             entry.launchCommand = QStringLiteral("lutris lutris:rungameid/%1").arg(gameId);
-            entry.installed = true;
 
             // Cover art: Lutris stores covers in ~/.local/share/lutris/coverart/
             if (!coverart.isEmpty()) {
@@ -852,7 +833,6 @@ void GameLauncherProvider::loadHeroicGames()
             entry.source = QStringLiteral("heroic");
             entry.storageId = QStringLiteral("heroic:%1").arg(appName);
             entry.icon = QStringLiteral("heroic");
-            entry.installed = true;
 
             // Launch via Heroic protocol handler
             if (isGog) {

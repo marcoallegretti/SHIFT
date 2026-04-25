@@ -78,7 +78,7 @@ public:
     bool hasGamepad() const;
     GamepadDevice *primaryGamepad() const;
 
-    Q_INVOKABLE GamepadDevice *gamepadAt(int index) const;
+    GamepadDevice *gamepadAt(int index) const;
     Q_INVOKABLE QString buttonLabel(int button, int gamepadIndex = -1) const;
 
 Q_SIGNALS:

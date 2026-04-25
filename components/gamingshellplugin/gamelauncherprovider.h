@@ -44,7 +44,6 @@ public:
         LaunchMethodRole,
         ArtworkRole, // path to banner/grid image (empty if none)
         LastPlayedTextRole,
-        InstalledRole,
         PinnedRole,
     };
     Q_ENUM(Roles)
@@ -106,12 +105,10 @@ private:
         QString launchCommand;
         QString artwork;
         QDateTime lastPlayed;
-        bool installed = true;
     };
 
     void loadDesktopGames();
     void loadSteamGames();
-    void loadFlatpakGames();
     void loadLutrisGames();
     void loadHeroicGames();
     void deduplicateGames();
