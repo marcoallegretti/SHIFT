@@ -366,6 +366,11 @@ ContainmentItem {
             maskManager: root.maskManager
             homeScreen: folioHomeScreen
             transform: Translate { y: dockOverlay.dockOffset }
+            // Dock is an opaque panel — use Window colorset so all content
+            // (labels, hover highlights, icon tints) follows the system theme
+            // instead of the containment's Complementary wallpaper context.
+            Kirigami.Theme.inherit: false
+            Kirigami.Theme.colorSet: Kirigami.Theme.Window
         }
     }
 

@@ -15,8 +15,9 @@ Item {
     id: root
     property Folio.HomeScreen folio
 
-    Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
-    Kirigami.Theme.inherit: false
+    // Do not override the colorset: in mobile mode we inherit Complementary
+    // from the containment (wallpaper context, white text); in convergence mode
+    // the drawerOverlay Window gives us Window context (system-adaptive).
 
     function addSearchText(text: string) {
         searchField.text += text;
@@ -57,13 +58,12 @@ Item {
 
             background: Rectangle {
                 radius: Kirigami.Units.cornerRadius
-                color: Qt.rgba(255, 255, 255, (searchField.hovered || searchField.focus) ? 0.2 : 0.1)
+                color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g,
+                               Kirigami.Theme.textColor.b,
+                               (searchField.hovered || searchField.focus) ? 0.2 : 0.1)
 
                 Behavior on color { ColorAnimation {} }
             }
-
-            Kirigami.Theme.inherit: false
-            Kirigami.Theme.colorSet: Kirigami.Theme.Complementary
 
             topPadding: Kirigami.Units.largeSpacing + Kirigami.Units.smallSpacing
             bottomPadding: Kirigami.Units.largeSpacing + Kirigami.Units.smallSpacing
@@ -71,8 +71,8 @@ Item {
 
             horizontalAlignment: QQC2.TextField.AlignHCenter
             placeholderText: i18nc("@info:placeholder", "Search applications…")
-            placeholderTextColor: Qt.rgba(255, 255, 255, 0.8)
-            color: 'white'
+            placeholderTextColor: Kirigami.Theme.disabledTextColor
+            color: Kirigami.Theme.textColor
 
             font.weight: Font.Bold
 
