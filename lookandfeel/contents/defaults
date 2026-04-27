@@ -8,11 +8,11 @@
 widgetStyle=Breeze
 
 [kdeglobals][General]
-ColorScheme=BreezeLight
-Name=Breeze
+ColorScheme=ShiftDark
+Name=Shift Dark
 
 [kdeglobals][Icons]
-Theme=breeze
+Theme=breeze-dark
 
 [plasmarc][Theme]
 name=default
@@ -26,6 +26,7 @@ cursorTheme=breeze_cursors
 
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.breeze
+theme=Shift Dark
 
 [KSplash]
 Theme=org.kde.Breeze
