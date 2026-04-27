@@ -83,6 +83,12 @@ Item {
                 return true;
             }
 
+            // In convergence mode the status bar behaves like a desktop panel:
+            // always opaque so it matches the dock and doesn't let the wallpaper bleed through.
+            if (ShellSettings.Settings.convergenceModeEnabled) {
+                return false;
+            }
+
             return !containmentItem.showingApp && !containmentItem.fullscreen;
         }
         forcedComplementary: {
