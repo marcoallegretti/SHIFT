@@ -88,7 +88,7 @@ MobileShell.NavigationPanel {
         id: homeAction
 
         enabled: true
-        iconSource: "start-here-kde"
+        iconSource: "start-here-shift"
 
         onTriggered: {
             MobileShellState.ShellDBusClient.openHomeScreen();

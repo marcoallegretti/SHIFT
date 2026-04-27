@@ -1,0 +1,10 @@
+<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <!-- top-left circle -->
+  <circle cx="16" cy="16" r="16" fill="#FBFBFB"/>
+  <circle cx="16" cy="16" r="5.4" fill="#31363B"/>
+  <!-- bottom-left circle -->
+  <circle cx="16" cy="80" r="16" fill="#FBFBFB"/>
+  <circle cx="16" cy="80" r="7.5" fill="#31363B"/>
+  <!-- right circle -->
+  <circle cx="80" cy="48" r="16" fill="#FBFBFB"/>
+</svg>

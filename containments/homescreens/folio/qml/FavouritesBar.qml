@@ -159,7 +159,7 @@ MouseArea {
             anchors.centerIn: parent
             width: Math.min(parent.width, parent.height) * 0.75
             height: width
-            source: "start-here-kde"
+            source: "start-here-shift"
             active: homeMouseArea.containsMouse
         }
 

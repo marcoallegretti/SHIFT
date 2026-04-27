@@ -141,6 +141,7 @@ plasma_install_package(lookandfeel org.kde.breeze.mobile look-and-feel lookandfe
 plasma_install_package(shell org.kde.plasma.mobileshell shells)
 
 add_subdirectory(bin)
+add_subdirectory(icons)
 add_subdirectory(components)
 add_subdirectory(containments)
 add_subdirectory(devices)
