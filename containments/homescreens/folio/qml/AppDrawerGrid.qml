@@ -11,6 +11,7 @@ import org.kde.kirigami as Kirigami
 
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.state as MobileShellState
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
 import "./delegate"
@@ -47,8 +48,11 @@ MobileShell.GridView {
 
     // HACK: the first swipe from the top of the app drawer is done from HomeScreenState, not the flickable
     //       due to issues with Flickable getting its swipe stolen by SwipeArea
-    interactive: (dragging || !atYBeginning) // allow us to drag to the top
-                    && folio.HomeScreenState.swipeState !== Folio.HomeScreenState.SwipingAppDrawerGrid
+    // In convergence mode the drawer is a popup opened by a button — no swipe-open gesture,
+    // so the grid must always be scrollable via mouse wheel/drag.
+    interactive: ShellSettings.Settings.convergenceModeEnabled
+                    || ((dragging || !atYBeginning) // allow us to drag to the top
+                        && folio.HomeScreenState.swipeState !== Folio.HomeScreenState.SwipingAppDrawerGrid)
 
     Connections {
         target: folio.HomeScreenState
