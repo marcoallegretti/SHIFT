@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Marco Allegretti
 # SPDX-License-Identifier: EUPL-1.2
 
-find_package(SDL3 REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Sql DBus)
 
 ecm_add_qml_module(gamingshellplugin URI org.kde.plasma.private.mobileshell.gamingshellplugin GENERATE_PLUGIN_SOURCE)
