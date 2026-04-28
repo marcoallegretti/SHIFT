@@ -20,4 +20,5 @@ build
 *.kdev4
 /build*
 .prefix/
+.preview-config/
 preview.sh
