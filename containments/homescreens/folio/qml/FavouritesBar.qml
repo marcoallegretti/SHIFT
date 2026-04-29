@@ -37,6 +37,21 @@ MouseArea {
 
     // Navigation buttons width (used to offset center positioning)
     readonly property real navButtonWidth: convergenceMode ? root.height : 0
+    readonly property real dockItemInset: convergenceMode ? Math.max(2, Kirigami.Units.smallSpacing / 2) : 0
+    readonly property real dockIconSize: Math.min(root.height * 0.56, Kirigami.Units.iconSizes.large)
+
+    function dockItemColor(pressed, hovered, active) {
+        if (pressed) {
+            return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.18)
+        }
+        if (active) {
+            return Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, hovered ? 0.18 : 0.12)
+        }
+        if (hovered) {
+            return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
+        }
+        return "transparent"
+    }
 
     // Center x for dock items (offset between nav buttons in convergence mode)
     readonly property real dockCenterX: convergenceMode
@@ -130,10 +145,7 @@ MouseArea {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
-        color: homeMouseArea.containsPress
-            ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
-            : (homeMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
-        radius: Kirigami.Units.cornerRadius
+        color: "transparent"
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Home")
@@ -155,9 +167,20 @@ MouseArea {
             visible: homeButton.activeFocus
         }
 
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: root.dockItemInset
+            radius: Kirigami.Units.cornerRadius
+            color: root.dockItemColor(homeMouseArea.containsPress, homeMouseArea.containsMouse, false)
+
+            Behavior on color {
+                ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+            }
+        }
+
         Kirigami.Icon {
             anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height) * 0.75
+            width: root.dockIconSize
             height: width
             source: "start-here-shift"
             active: homeMouseArea.containsMouse
@@ -181,10 +204,7 @@ MouseArea {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
-        color: overviewMouseArea.containsPress
-            ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
-            : (overviewMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
-        radius: Kirigami.Units.cornerRadius
+        color: "transparent"
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Overview")
@@ -206,9 +226,20 @@ MouseArea {
             visible: overviewButton.activeFocus
         }
 
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: root.dockItemInset
+            radius: Kirigami.Units.cornerRadius
+            color: root.dockItemColor(overviewMouseArea.containsPress, overviewMouseArea.containsMouse, false)
+
+            Behavior on color {
+                ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+            }
+        }
+
         Kirigami.Icon {
             anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height) * 0.75
+            width: root.dockIconSize
             height: width
             source: "view-grid-symbolic"
             active: overviewMouseArea.containsMouse
@@ -435,7 +466,7 @@ MouseArea {
                     maskManager: root.maskManager
                     application: delegate.delegateModel.application
                     name: folio.FolioSettings.showFavouritesAppLabels ? delegate.delegateModel.application.name : ""
-                    shadow: true
+                    shadow: !root.convergenceMode
 
                     turnToFolder: delegate.isAppHoveredOver
                     turnToFolderAnimEnabled: folio.HomeScreenState.isDraggingDelegate
@@ -540,7 +571,7 @@ MouseArea {
                     id: appFolderDelegate
                     folio: root.folio
                     maskManager: root.maskManager
-                    shadow: true
+                    shadow: !root.convergenceMode
                     folder: delegate.delegateModel.folder
                     name: folio.FolioSettings.showFavouritesAppLabels ? delegate.delegateModel.folder.name : ""
 
@@ -885,11 +916,11 @@ MouseArea {
         id: dockSpacer
         visible: root.showSpacer
         x: (repeater.count - root.totalItemCount / 2) * root.dockCellWidth + root.dockCenterX - width / 2
-        y: parent.height * 0.2
+        y: parent.height * 0.28
         width: Math.round(Kirigami.Units.devicePixelRatio)
-        height: parent.height * 0.6
+        height: parent.height * 0.44
         color: Kirigami.Theme.textColor
-        opacity: 0.4
+        opacity: 0.22
     }
 
     PlaceholderDelegate {
@@ -976,10 +1007,13 @@ MouseArea {
             // Hover highlight background
             Rectangle {
                 anchors.fill: parent
+                anchors.margins: root.dockItemInset
                 radius: Kirigami.Units.cornerRadius
-                color: taskMouseArea.containsPress
-                    ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.2)
-                    : (taskMouseArea.containsMouse ? Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1) : "transparent")
+                color: root.dockItemColor(taskMouseArea.containsPress, taskMouseArea.containsMouse, taskDelegate.model.IsActive === true)
+
+                Behavior on color {
+                    ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                }
             }
 
             KeyboardHighlight {
@@ -990,7 +1024,7 @@ MouseArea {
             // Task icon
             Kirigami.Icon {
                 anchors.centerIn: parent
-                width: Math.min(parent.width, parent.height) * 0.6
+                width: root.dockIconSize
                 height: width
                 source: taskDelegate.model.decoration
                 active: taskMouseArea.containsMouse
@@ -1039,7 +1073,7 @@ MouseArea {
             Row {
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottomMargin: Kirigami.Units.smallSpacing / 2
+                anchors.bottomMargin: Kirigami.Units.smallSpacing
                 spacing: Kirigami.Units.smallSpacing / 2
 
                 Repeater {
@@ -1049,11 +1083,15 @@ MouseArea {
                     }
 
                     Rectangle {
-                        width: Kirigami.Units.smallSpacing * 1.5
-                        height: width
-                        radius: width / 2
+                        width: taskDelegate.model.IsActive === true ? Kirigami.Units.smallSpacing * 3 : Kirigami.Units.smallSpacing * 1.5
+                        height: Math.max(2, Math.round(Kirigami.Units.devicePixelRatio))
+                        radius: height / 2
                         color: Kirigami.Theme.highlightColor
-                        opacity: taskDelegate.model.IsActive === true ? 1.0 : 0.4
+                        opacity: taskDelegate.model.IsActive === true ? 1.0 : 0.45
+
+                        Behavior on width {
+                            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                        }
                     }
                 }
             }
