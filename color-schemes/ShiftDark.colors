@@ -29,7 +29,7 @@ IntensityEffect=0
 
 [Colors:Button]
 BackgroundAlternate=16,82,74
-BackgroundNormal=41,44,48
+BackgroundNormal=34,37,50
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -43,7 +43,7 @@ ForegroundVisited=155,89,182
 
 [Colors:Complementary]
 BackgroundAlternate=16,82,74
-BackgroundNormal=32,35,38
+BackgroundNormal=24,27,38
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -56,8 +56,8 @@ ForegroundPositive=39,174,96
 ForegroundVisited=155,89,182
 
 [Colors:Header]
-BackgroundAlternate=32,35,38
-BackgroundNormal=41,44,48
+BackgroundAlternate=24,27,38
+BackgroundNormal=34,37,50
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -70,8 +70,8 @@ ForegroundPositive=39,174,96
 ForegroundVisited=155,89,182
 
 [Colors:Header][Inactive]
-BackgroundAlternate=41,44,48
-BackgroundNormal=32,35,38
+BackgroundAlternate=34,37,50
+BackgroundNormal=24,27,38
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -98,8 +98,8 @@ ForegroundPositive=23,104,57
 ForegroundVisited=155,89,182
 
 [Colors:Tooltip]
-BackgroundAlternate=32,35,38
-BackgroundNormal=41,44,48
+BackgroundAlternate=24,27,38
+BackgroundNormal=34,37,50
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -112,8 +112,8 @@ ForegroundPositive=39,174,96
 ForegroundVisited=155,89,182
 
 [Colors:View]
-BackgroundAlternate=29,31,34
-BackgroundNormal=20,22,24
+BackgroundAlternate=20,22,32
+BackgroundNormal=14,15,22
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -126,8 +126,8 @@ ForegroundPositive=39,174,96
 ForegroundVisited=155,89,182
 
 [Colors:Window]
-BackgroundAlternate=41,44,48
-BackgroundNormal=32,35,38
+BackgroundAlternate=34,37,50
+BackgroundNormal=24,27,38
 DecorationFocus=46,184,168
 DecorationHover=46,184,168
 ForegroundActive=46,184,168
@@ -148,9 +148,9 @@ shadeSortColumn=true
 contrast=4
 
 [WM]
-activeBackground=39,44,49
+activeBackground=28,33,46
 activeBlend=252,252,252
 activeForeground=252,252,252
-inactiveBackground=32,36,40
+inactiveBackground=22,27,38
 inactiveBlend=161,169,177
 inactiveForeground=161,169,177
