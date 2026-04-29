@@ -24,12 +24,14 @@ MouseArea {
     property MobileShell.MaskManager maskManager
 
     property var homeScreen
+    property bool suppressRunningTasks: false
 
     signal delegateDragRequested(var item)
 
     // Convergence mode: show running apps alongside favourites
     readonly property bool convergenceMode: ShellSettings.Settings.convergenceModeEnabled
-    readonly property int totalItemCount: repeater.count + (convergenceMode ? taskRepeater.count : 0)
+    readonly property bool showRunningTasks: convergenceMode && !suppressRunningTasks
+    readonly property int totalItemCount: repeater.count + (showRunningTasks ? taskRepeater.count : 0)
 
     // In convergence mode, size icons to fit the dock bar instead of using page grid cells
     readonly property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
@@ -59,7 +61,7 @@ MouseArea {
         : root.width / 2
 
     // Visible spacer between pinned favourites and running tasks
-    readonly property bool showSpacer: convergenceMode && repeater.count > 0 && taskRepeater.count > 0
+    readonly property bool showSpacer: showRunningTasks && repeater.count > 0 && taskRepeater.count > 0
     property real spacerWidth: showSpacer ? Kirigami.Units.largeSpacing * 2 : 0
     Behavior on spacerWidth {
         NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutQuad }
@@ -936,7 +938,7 @@ MouseArea {
 
     Repeater {
         id: taskRepeater
-        model: root.convergenceMode ? tasksModel : null
+        model: root.showRunningTasks ? tasksModel : null
 
         delegate: Item {
             id: taskDelegate

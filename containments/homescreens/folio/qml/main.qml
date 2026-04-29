@@ -32,7 +32,7 @@ import "./private"
 
 ContainmentItem {
     id: root
-    property Folio.HomeScreen folio: root.plasmoid
+    property var folio: root.plasmoid
 
     // Tracks whether the Game Center grid is visible within gaming mode.
     // If gaming mode is already enabled at startup, open it immediately so
@@ -365,6 +365,7 @@ ContainmentItem {
             folio: root.folio
             maskManager: root.maskManager
             homeScreen: folioHomeScreen
+            suppressRunningTasks: runningAppsPanel.visible
             transform: Translate { y: dockOverlay.dockOffset }
             // Dock is an opaque panel — use Window colorset so all content
             // (labels, hover highlights, icon tints) follows the system theme
@@ -519,7 +520,9 @@ ContainmentItem {
 
             width: tileSize
             height: overlayDrawer.popupHeight
-            x: categoryPanel.x + categoryPanel.width + Kirigami.Units.smallSpacing
+            x: runningAppsPanel.visible
+                ? runningAppsPanel.x + runningAppsPanel.width + Kirigami.Units.smallSpacing
+                : categoryPanel.x + categoryPanel.width + Kirigami.Units.smallSpacing
             y: overlayDrawer.y
             opacity: overlayDrawer.opacity
             radius: Kirigami.Units.cornerRadius
@@ -738,6 +741,20 @@ ContainmentItem {
                     }
                 }
             }
+        }
+
+        RunningAppsPanel {
+            id: runningAppsPanel
+            folio: root.folio
+
+            x: categoryPanel.x + categoryPanel.width + Kirigami.Units.smallSpacing
+            y: overlayDrawer.y
+            width: Math.max(0, parent.width - x - powerPanel.width - Kirigami.Units.smallSpacing * 2)
+            height: overlayDrawer.popupHeight
+            opacity: overlayDrawer.opacity
+            visible: hasTasks && opacity > 0
+
+            onTaskActivated: folio.HomeScreenState.closeAppDrawer()
         }
     }
 

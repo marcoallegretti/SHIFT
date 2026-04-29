@@ -20,6 +20,7 @@ plasma_add_applet(org.kde.plasma.mobile.homescreen.folio
         qml/main.qml
         qml/PipeWireThumbnail.qml
         qml/PlaceholderDelegate.qml
+        qml/RunningAppsPanel.qml
         qml/WidgetDragItem.qml
         qml/config.qml
     CPP_SOURCES
@@ -95,6 +96,7 @@ target_link_libraries(org.kde.plasma.mobile.homescreen.folio PRIVATE
     KF6::Service
     KF6::KIOGui
     KF6::Notifications
+    PW::LibTaskManager
     Plasma::KWaylandClient
     KF6::WindowSystem
     KF6::JobWidgets

@@ -4,6 +4,8 @@
 
 #include "homescreen.h"
 
+#include <virtualdesktopinfo.h>
+
 #include <KWindowSystem>
 
 #include <QDBusConnection>
@@ -94,6 +96,16 @@ void HomeScreen::triggerOverview() const
     QDBusMessage message = QDBusMessage::createMethodCall("org.kde.kglobalaccel", "/component/kwin", "org.kde.kglobalaccel.Component", "invokeShortcut");
     message.setArguments({QStringLiteral("Overview")});
     QDBusConnection::sessionBus().send(message);
+}
+
+void HomeScreen::activateVirtualDesktop(const QVariant &desktop) const
+{
+    if (!desktop.isValid() || desktop.toString().isEmpty()) {
+        return;
+    }
+
+    TaskManager::VirtualDesktopInfo virtualDesktopInfo;
+    virtualDesktopInfo.requestActivate(desktop);
 }
 
 #include "homescreen.moc"

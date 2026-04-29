@@ -6,6 +6,7 @@
 
 #include <Plasma/Containment>
 #include <QSortFilterProxyModel>
+#include <QVariant>
 
 #include "applicationlistmodel.h"
 #include "delegatetoucharea.h"
@@ -49,6 +50,7 @@ public:
     void configChanged() override;
 
     Q_INVOKABLE void triggerOverview() const;
+    Q_INVOKABLE void activateVirtualDesktop(const QVariant &desktop) const;
 
     FolioSettings *folioSettings();
     HomeScreenState *homeScreenState();
