@@ -41,10 +41,20 @@ MobileShell.BaseItem {
 
     readonly property color enabledButtonBorderColor: Qt.darker(Kirigami.Theme.highlightColor, 1.25)
     readonly property color disabledButtonBorderColor: separatorColorHelper(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.2)
-    readonly property color enabledButtonColor: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.highlightColor, Kirigami.Theme.backgroundColor, 0.6)
-    readonly property color enabledButtonPressedColor: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.highlightColor, Kirigami.Theme.backgroundColor, 0.4);
-    readonly property color disabledButtonColor: Kirigami.Theme.backgroundColor
+    readonly property color enabledButtonColor: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.25)
+    readonly property color enabledButtonHoverColor: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.32)
+    readonly property color enabledButtonPressedColor: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.12);
+    readonly property color disabledButtonColor: Kirigami.Theme.alternateBackgroundColor
+    readonly property color disabledButtonHoverColor: mixColor(Kirigami.Theme.alternateBackgroundColor, Kirigami.Theme.textColor, 0.06)
     readonly property color disabledButtonPressedColor: Qt.darker(disabledButtonColor, 1.1)
+
+    function mixColor(base, overlay, ratio) {
+        return Qt.rgba(
+            base.r + (overlay.r - base.r) * ratio,
+            base.g + (overlay.g - base.g) * ratio,
+            base.b + (overlay.b - base.b) * ratio,
+            base.a + (overlay.a - base.a) * ratio)
+    }
 
     function separatorColorHelper(bg, fg, baseRatio) {
         if (Kirigami.ColorUtils.brightnessForColor(bg) === Kirigami.ColorUtils.Light) {

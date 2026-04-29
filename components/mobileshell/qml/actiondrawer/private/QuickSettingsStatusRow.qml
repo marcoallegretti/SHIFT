@@ -30,14 +30,14 @@ Item {
     Kirigami.Theme.inherit: false
     Kirigami.Theme.colorSet: Kirigami.Theme.Button
 
-    // ── Palette (shared with tile delegates) ────────────────────────────
-    readonly property color enabledBg: Kirigami.ColorUtils.tintWithAlpha(
-        Kirigami.Theme.highlightColor, Kirigami.Theme.backgroundColor, 0.6)
-    readonly property color enabledBgPressed: Kirigami.ColorUtils.tintWithAlpha(
-        Kirigami.Theme.highlightColor, Kirigami.Theme.backgroundColor, 0.4)
+    readonly property int rowRadius: Kirigami.Units.largeSpacing + Kirigami.Units.smallSpacing
+    readonly property color enabledBg: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.25)
+    readonly property color enabledBgHover: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.32)
+    readonly property color enabledBgPressed: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.12)
     readonly property color enabledBorder: Qt.darker(Kirigami.Theme.highlightColor, 1.25)
 
-    readonly property color disabledBg: Kirigami.Theme.backgroundColor
+    readonly property color disabledBg: Kirigami.Theme.alternateBackgroundColor
+    readonly property color disabledBgHover: mixColor(Kirigami.Theme.alternateBackgroundColor, Kirigami.Theme.textColor, 0.06)
     readonly property color disabledBgPressed: Qt.darker(disabledBg, 1.1)
     readonly property color disabledBorder: {
         let bg = Kirigami.Theme.backgroundColor;
@@ -47,6 +47,14 @@ Item {
         } else {
             return Kirigami.ColorUtils.linearInterpolation(bg, fg, 0.1);
         }
+    }
+
+    function mixColor(base, overlay, ratio) {
+        return Qt.rgba(
+            base.r + (overlay.r - base.r) * ratio,
+            base.g + (overlay.g - base.g) * ratio,
+            base.b + (overlay.b - base.b) * ratio,
+            base.a + (overlay.a - base.a) * ratio)
     }
 
     MobileShell.HapticsEffect { id: haptics }
@@ -59,8 +67,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         height: parent.height
-        radius: Kirigami.Units.cornerRadius
-        color: Qt.rgba(0, 0, 0, 0.075)
+        radius: root.rowRadius
+        color: Qt.rgba(0, 0, 0, root.enabled ? 0.12 : 0.08)
     }
 
     // Card background — always neutral base (the toggle pill carries the
@@ -68,7 +76,7 @@ Item {
     Rectangle {
         id: cardBg
         anchors.fill: parent
-        radius: Kirigami.Units.cornerRadius
+        radius: root.rowRadius
         border.pixelAligned: false
         border.width: 1
         border.color: root.disabledBorder
@@ -96,9 +104,15 @@ Item {
                 border.color: root.enabled ? root.enabledBorder : root.disabledBorder
                 color: {
                     if (root.enabled) {
-                        return toggleMouse.pressed ? root.enabledBgPressed : root.enabledBg;
+                        if (toggleMouse.pressed) {
+                            return root.enabledBgPressed;
+                        }
+                        return toggleMouse.containsMouse ? root.enabledBgHover : root.enabledBg;
                     }
-                    return toggleMouse.pressed ? root.disabledBgPressed : root.disabledBg;
+                    if (toggleMouse.pressed) {
+                        return root.disabledBgPressed;
+                    }
+                    return toggleMouse.containsMouse ? root.disabledBgHover : root.disabledBg;
                 }
 
                 Behavior on color {
@@ -129,20 +143,25 @@ Item {
                     source: root.icon
                 }
 
-                // Indicator dot
+                // Indicator bar
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
-                    width: Kirigami.Units.smallSpacing * 1.5
-                    height: width
-                    radius: width / 2
+                    width: root.enabled ? Kirigami.Units.smallSpacing * 3 : Kirigami.Units.smallSpacing * 1.5
+                    height: Math.max(2, Math.round(Kirigami.Units.devicePixelRatio))
+                    radius: height / 2
                     color: root.enabled ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
                     opacity: root.enabled ? 1.0 : 0.4
+
+                    Behavior on width {
+                        NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                    }
                 }
             }
 
             MouseArea {
                 id: toggleMouse
                 anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onPressed: haptics.buttonVibrate()
                 onClicked: {

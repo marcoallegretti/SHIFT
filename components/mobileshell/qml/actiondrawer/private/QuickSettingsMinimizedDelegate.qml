@@ -45,10 +45,20 @@ QuickSettingsDelegate {
             border.color: root.enabled ? root.enabledButtonBorderColor : root.disabledButtonBorderColor
             color: {
                 if (root.enabled) {
-                    return mouseArea.pressed ? root.enabledButtonPressedColor : root.enabledButtonColor
+                    if (mouseArea.pressed) {
+                        return root.enabledButtonPressedColor
+                    }
+                    return mouseArea.containsMouse ? root.enabledButtonHoverColor : root.enabledButtonColor
                 } else {
-                    return mouseArea.pressed ? root.disabledButtonPressedColor : root.disabledButtonColor
+                    if (mouseArea.pressed) {
+                        return root.disabledButtonPressedColor
+                    }
+                    return mouseArea.containsMouse ? root.disabledButtonHoverColor : root.disabledButtonColor
                 }
+            }
+
+            Behavior on color {
+                ColorAnimation { duration: ShellSettings.Settings.animationsEnabled ? Kirigami.Units.shortDuration : 0; easing.type: Easing.OutCubic }
             }
         }
     }
@@ -59,6 +69,7 @@ QuickSettingsDelegate {
 
     contentItem: MouseArea {
         id: mouseArea
+        hoverEnabled: true
 
         onPressed: haptics.buttonVibrate();
         onClicked: root.delegateClick()
