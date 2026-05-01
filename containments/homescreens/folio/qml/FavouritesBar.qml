@@ -4,6 +4,8 @@
 import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Layouts 1.1
+import QtCore
+import Qt.labs.folderlistmodel
 
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell.state as MobileShellState
@@ -91,6 +93,7 @@ MouseArea {
     readonly property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
     readonly property int pagerLeftCount: showPager ? Math.ceil(virtualDesktopInfo.numberOfDesktops / 2) : 0
     readonly property int pagerRightCount: showPager ? virtualDesktopInfo.numberOfDesktops - pagerLeftCount : 0
+    readonly property real trashButtonWidth: convergenceMode ? root.height : 0
 
     function pagerDesktopName(index) {
         let names = virtualDesktopInfo.desktopNames
@@ -109,7 +112,7 @@ MouseArea {
                 return (ids && i < ids.length) ? String(ids[i]) : ""
         }
         for (let i = 0; i < pagerRightCount; ++i) {
-            let bx = root.width - navButtonWidth - (pagerRightCount - i) * pagerButtonWidth
+            let bx = root.width - navButtonWidth - root.trashButtonWidth - (pagerRightCount - i) * pagerButtonWidth
             if (x >= bx && x < bx + pagerButtonWidth) {
                 let di = pagerLeftCount + i
                 return (ids && di < ids.length) ? String(ids[di]) : ""
@@ -371,7 +374,7 @@ MouseArea {
                 return root.pagerButtonDesktopAt(cx) === desktopId
             }
 
-            x: root.width - root.navButtonWidth - (root.pagerRightCount - index) * root.pagerButtonWidth
+            x: root.width - root.navButtonWidth - root.trashButtonWidth - (root.pagerRightCount - index) * root.pagerButtonWidth
             y: 0
             width: root.pagerButtonWidth
             height: root.height
@@ -409,6 +412,121 @@ MouseArea {
                     if (rightDesktopBtn.desktopId)
                         root.folio.activateVirtualDesktop(rightDesktopBtn.desktopId)
                 }
+            }
+        }
+    }
+
+    // ---- Trash button (convergence mode, sits between the right pager wing and the Overview button) ----
+
+    // Watches ~/.local/share/Trash/files to detect empty/full state.
+    // FolderListModel reacts to directory changes automatically.
+    FolderListModel {
+        id: trashFilesModel
+        folder: StandardPaths.writableLocation(StandardPaths.HomeLocation) + "/.local/share/Trash/files"
+        showFiles: true
+        showDirs: true
+        showDotAndDotDot: false
+    }
+
+    // Confirmation dialog for "Empty Trash" — parented to the homescreen so it
+    // is sized correctly and floats above all dock content.
+    Loader {
+        id: emptyTrashDialogLoader
+        parent: root.homeScreen
+        anchors.fill: parent
+        active: false
+
+        function open() {
+            active = true;
+            item.open();
+        }
+
+        sourceComponent: Kirigami.PromptDialog {
+            title: i18n("Empty Trash")
+            subtitle: i18n("Permanently delete all items in the trash? This action cannot be undone.")
+            standardButtons: Kirigami.Dialog.Yes | Kirigami.Dialog.Cancel
+            onAccepted: root.folio.emptyTrash()
+            onClosed: emptyTrashDialogLoader.active = false
+        }
+    }
+
+    Rectangle {
+        id: trashButton
+        visible: root.convergenceMode
+        activeFocusOnTab: root.convergenceMode
+        x: root.width - root.navButtonWidth - root.trashButtonWidth
+        y: 0
+        width: root.trashButtonWidth
+        height: root.height
+        color: "transparent"
+
+        Accessible.role: Accessible.Button
+        Accessible.name: i18n("Trash")
+        Accessible.onPressAction: Qt.openUrlExternally("trash:/")
+
+        Keys.onReturnPressed: Qt.openUrlExternally("trash:/")
+        Keys.onEnterPressed:  Qt.openUrlExternally("trash:/")
+        Keys.onSpacePressed:  Qt.openUrlExternally("trash:/")
+
+        KeyboardHighlight {
+            anchors.fill: parent
+            visible: trashButton.activeFocus
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: root.dockItemInset
+            radius: Kirigami.Units.cornerRadius
+            color: root.dockItemColor(trashMouseArea.containsPress, trashMouseArea.containsMouse, false)
+            Behavior on color {
+                ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+            }
+        }
+
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: root.dockIconSize
+            height: width
+            source: trashFilesModel.count > 0 ? "user-trash-full" : "user-trash"
+            active: trashMouseArea.containsMouse
+        }
+
+        PC3.ToolTip {
+            visible: trashMouseArea.containsMouse
+            text: trashFilesModel.count > 0
+                ? i18np("Trash — 1 item", "Trash — %1 items", trashFilesModel.count)
+                : i18n("Trash")
+        }
+
+        MouseArea {
+            id: trashMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    trashContextMenu.open()
+                } else {
+                    Qt.openUrlExternally("trash:/")
+                }
+            }
+        }
+
+        PC3.Menu {
+            id: trashContextMenu
+            popupType: T.Popup.Window
+
+            PC3.MenuItem {
+                icon.name: "folder-open"
+                text: i18n("Open Trash")
+                onTriggered: Qt.openUrlExternally("trash:/")
+            }
+            PC3.MenuItem {
+                icon.name: "trash-empty"
+                text: i18n("Empty Trash")
+                enabled: trashFilesModel.count > 0
+                onTriggered: emptyTrashDialogLoader.open()
             }
         }
     }

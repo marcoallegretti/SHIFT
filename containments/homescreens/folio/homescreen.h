@@ -51,6 +51,7 @@ public:
 
     Q_INVOKABLE void triggerOverview() const;
     Q_INVOKABLE void activateVirtualDesktop(const QVariant &desktop) const;
+    Q_INVOKABLE void emptyTrash() const;
 
     FolioSettings *folioSettings();
     HomeScreenState *homeScreenState();

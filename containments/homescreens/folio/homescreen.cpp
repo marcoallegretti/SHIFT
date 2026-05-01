@@ -108,4 +108,13 @@ void HomeScreen::activateVirtualDesktop(const QVariant &desktop) const
     virtualDesktopInfo.requestActivate(desktop);
 }
 
+void HomeScreen::emptyTrash() const
+{
+    QDBusMessage message = QDBusMessage::createMethodCall(QStringLiteral("org.kde.kio.trash"),
+                                                          QStringLiteral("/trash"),
+                                                          QStringLiteral("org.kde.KIO.Trash"),
+                                                          QStringLiteral("emptyTrash"));
+    QDBusConnection::sessionBus().send(message);
+}
+
 #include "homescreen.moc"
