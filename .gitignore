@@ -21,4 +21,5 @@ build
 /build*
 .prefix/
 .preview-config/
+.preview-data/
 preview.sh

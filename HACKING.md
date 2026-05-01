@@ -96,8 +96,7 @@ complete Plasma Mobile runtime so all QML imports resolve:
 sudo zypper install --no-confirm \
     plasma6-mobile plasma6-workspace plasma6-nano plasma6-nm plasma6-pa \
     layer-shell-qt6-imports kf6-bluez-qt-imports \
-    kf6-networkmanager-qt-imports \
-    breeze6-wallpapers plasma6-workspace-wallpapers
+  kf6-networkmanager-qt-imports
 ```
 
 ---
