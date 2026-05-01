@@ -23,6 +23,10 @@ Item {
 
     readonly property bool homeScreenInteractive: !appletListViewer.active
 
+    function openWidgetsBrowser() {
+        appletListViewer.active = true;
+    }
+
     property real bottomMargin: 0
     property real leftMargin: 0
     property real rightMargin: 0

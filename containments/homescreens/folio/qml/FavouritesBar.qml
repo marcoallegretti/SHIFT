@@ -559,9 +559,12 @@ MouseArea {
     }
 
     onClicked: (mouse) => {
-        // Right-click opens settings view (wallpaper/widgets), same as long-press
         if (mouse.button === Qt.RightButton) {
-            folio.HomeScreenState.openSettingsView();
+            if (convergenceMode) {
+                root.homeScreen.showDesktopContextMenu();
+            } else {
+                folio.HomeScreenState.openSettingsView();
+            }
         }
     }
 

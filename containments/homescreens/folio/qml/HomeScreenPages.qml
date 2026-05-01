@@ -7,6 +7,7 @@ import QtQuick.Layouts
 
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell as MobileShell
+import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 import org.kde.kirigami as Kirigami
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
@@ -28,9 +29,12 @@ MouseArea {
     }
 
     onClicked: (mouse) => {
-        // Right-click opens settings view (wallpaper/widgets), same as long-press
         if (mouse.button === Qt.RightButton) {
-            folio.HomeScreenState.openSettingsView();
+            if (ShellSettings.Settings.convergenceModeEnabled) {
+                root.homeScreen.showDesktopContextMenu();
+            } else {
+                folio.HomeScreenState.openSettingsView();
+            }
         }
     }
 

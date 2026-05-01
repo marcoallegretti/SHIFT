@@ -13,6 +13,7 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.components 3.0 as PC3
 import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
+import QtQuick.Templates as T
 import plasma.applet.org.kde.plasma.mobile.homescreen.folio as Folio
 
 import "./delegate"
@@ -76,6 +77,35 @@ Item {
 
     function openConfigure() {
         Plasmoid.internalAction("configure").trigger();
+    }
+
+    function showDesktopContextMenu() {
+        desktopContextMenu.popup();
+    }
+
+    PC3.Menu {
+        id: desktopContextMenu
+        popupType: T.Popup.Window
+
+        PC3.MenuItem {
+            text: i18n("Desktop and Wallpaper...")
+            icon.name: "preferences-desktop-wallpaper"
+            onTriggered: root.wallpaperSelectorTriggered()
+        }
+        PC3.MenuItem {
+            text: i18n("Add Widgets...")
+            icon.name: "widget-alternatives"
+            onTriggered: {
+                folio.HomeScreenState.openSettingsView();
+                settings.openWidgetsBrowser();
+            }
+        }
+        PC3.MenuSeparator {}
+        PC3.MenuItem {
+            text: i18n("Configure Desktop...")
+            icon.name: "settings-configure"
+            onTriggered: root.openConfigure()
+        }
     }
 
     Keys.onPressed: (event) => {
