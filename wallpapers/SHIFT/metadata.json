@@ -1,0 +1,12 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Luiza Balaur"
+            }
+        ],
+        "Id": "SHIFT",
+        "License": "EUPL-1.2",
+        "Name": "SHIFT Light / SHIFT Dark"
+    }
+}

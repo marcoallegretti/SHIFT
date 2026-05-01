@@ -138,12 +138,19 @@ include(CheckIncludeFiles)
 
 ecm_find_qmlmodule(org.kde.pipewire 0.1)
 
-plasma_install_package(lookandfeel org.kde.breeze.mobile look-and-feel lookandfeel)
-plasma_install_package(shell org.kde.plasma.mobileshell shells)
+set(SHIFT_DEFAULT_WALLPAPER_URL "file://${KDE_INSTALL_FULL_WALLPAPERDIR}/SHIFT/")
+set(SHIFT_SHELL_PACKAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/shell")
+file(REMOVE_RECURSE "${SHIFT_SHELL_PACKAGE_DIR}")
+file(COPY shell/ DESTINATION "${SHIFT_SHELL_PACKAGE_DIR}" PATTERN "layout.js.in" EXCLUDE)
+configure_file(shell/contents/layout.js.in "${SHIFT_SHELL_PACKAGE_DIR}/contents/layout.js" @ONLY)
+
+plasma_install_package(lookandfeel org.shift.mobile look-and-feel lookandfeel)
+plasma_install_package(${SHIFT_SHELL_PACKAGE_DIR} org.kde.plasma.mobileshell shells)
 
 add_subdirectory(bin)
 add_subdirectory(color-schemes)
 add_subdirectory(icons)
+add_subdirectory(wallpapers)
 add_subdirectory(components)
 add_subdirectory(containments)
 add_subdirectory(devices)
