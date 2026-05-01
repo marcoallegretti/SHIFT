@@ -86,6 +86,38 @@ MouseArea {
     property string taskPinStorageId: ""
     readonly property bool taskPinCanDrop: taskPinTargetIndex !== -1 && taskPinStorageId !== ""
 
+    // Virtual desktop pager (convergence mode, 2+ desktops)
+    readonly property bool showPager: convergenceMode && virtualDesktopInfo.numberOfDesktops > 1
+    readonly property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
+    readonly property int pagerLeftCount: showPager ? Math.ceil(virtualDesktopInfo.numberOfDesktops / 2) : 0
+    readonly property int pagerRightCount: showPager ? virtualDesktopInfo.numberOfDesktops - pagerLeftCount : 0
+
+    function pagerDesktopName(index) {
+        let names = virtualDesktopInfo.desktopNames
+        if (names && index < names.length && String(names[index]).length > 0)
+            return String(names[index])
+        return i18n("Desktop %1", index + 1)
+    }
+
+    // Returns the desktop ID of the pager button under screen-space x, or ""
+    function pagerButtonDesktopAt(x) {
+        if (!showPager) return ""
+        let ids = virtualDesktopInfo.desktopIds
+        for (let i = 0; i < pagerLeftCount; ++i) {
+            let bx = navButtonWidth + i * pagerButtonWidth
+            if (x >= bx && x < bx + pagerButtonWidth)
+                return (ids && i < ids.length) ? String(ids[i]) : ""
+        }
+        for (let i = 0; i < pagerRightCount; ++i) {
+            let bx = root.width - navButtonWidth - (pagerRightCount - i) * pagerButtonWidth
+            if (x >= bx && x < bx + pagerButtonWidth) {
+                let di = pagerLeftCount + i
+                return (ids && di < ids.length) ? String(ids[di]) : ""
+            }
+        }
+        return ""
+    }
+
     function runningTaskStorageId(taskModel) {
         var id = taskModel ? taskModel.AppId || "" : ""
         if (id && !id.endsWith(".desktop"))
@@ -253,6 +285,131 @@ MouseArea {
             hoverEnabled: true
             cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: root.folio.triggerOverview()
+        }
+    }
+
+    // ---- Virtual desktop pager: left wing (desktops 1 .. ceil(N/2)) ----
+    Repeater {
+        id: leftPagerRepeater
+        model: root.pagerLeftCount
+
+        delegate: Item {
+            id: leftDesktopBtn
+            required property int index
+
+            readonly property string desktopId: {
+                let ids = virtualDesktopInfo.desktopIds
+                return (ids && index < ids.length) ? String(ids[index]) : ""
+            }
+            readonly property bool isCurrent: desktopId !== "" && String(desktopId) === String(virtualDesktopInfo.currentDesktop)
+            readonly property bool isDragTarget: {
+                if (root.taskPinDragIndex < 0) return false
+                let cx = root.taskBaseX(root.taskPinDragIndex) + root.dockCellWidth / 2 + root.taskPinDragOffset
+                return root.pagerButtonDesktopAt(cx) === desktopId
+            }
+
+            x: root.navButtonWidth + index * root.pagerButtonWidth
+            y: 0
+            width: root.pagerButtonWidth
+            height: root.height
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: root.dockItemInset
+                radius: Kirigami.Units.cornerRadius
+                color: leftDesktopBtn.isCurrent || leftDesktopBtn.isDragTarget
+                    ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b,
+                              leftPagerHover.containsMouse || leftDesktopBtn.isDragTarget ? 0.25 : 0.18)
+                    : root.dockItemColor(leftPagerHover.containsPress, leftPagerHover.containsMouse, false)
+                Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+            }
+
+            PC3.Label {
+                anchors.centerIn: parent
+                text: (leftDesktopBtn.index + 1).toString()
+                color: leftDesktopBtn.isCurrent ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                font.pixelSize: Math.round(parent.height * 0.3)
+                font.bold: leftDesktopBtn.isCurrent
+            }
+
+            PC3.ToolTip {
+                visible: leftPagerHover.containsMouse
+                text: root.pagerDesktopName(leftDesktopBtn.index)
+            }
+
+            MouseArea {
+                id: leftPagerHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (leftDesktopBtn.desktopId)
+                        root.folio.activateVirtualDesktop(leftDesktopBtn.desktopId)
+                }
+            }
+        }
+    }
+
+    // ---- Virtual desktop pager: right wing (desktops ceil(N/2)+1 .. N) ----
+    Repeater {
+        id: rightPagerRepeater
+        model: root.pagerRightCount
+
+        delegate: Item {
+            id: rightDesktopBtn
+            required property int index
+
+            readonly property int desktopIndex: root.pagerLeftCount + index
+            readonly property string desktopId: {
+                let ids = virtualDesktopInfo.desktopIds
+                return (ids && desktopIndex < ids.length) ? String(ids[desktopIndex]) : ""
+            }
+            readonly property bool isCurrent: desktopId !== "" && String(desktopId) === String(virtualDesktopInfo.currentDesktop)
+            readonly property bool isDragTarget: {
+                if (root.taskPinDragIndex < 0) return false
+                let cx = root.taskBaseX(root.taskPinDragIndex) + root.dockCellWidth / 2 + root.taskPinDragOffset
+                return root.pagerButtonDesktopAt(cx) === desktopId
+            }
+
+            x: root.width - root.navButtonWidth - (root.pagerRightCount - index) * root.pagerButtonWidth
+            y: 0
+            width: root.pagerButtonWidth
+            height: root.height
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: root.dockItemInset
+                radius: Kirigami.Units.cornerRadius
+                color: rightDesktopBtn.isCurrent || rightDesktopBtn.isDragTarget
+                    ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b,
+                              rightPagerHover.containsMouse || rightDesktopBtn.isDragTarget ? 0.25 : 0.18)
+                    : root.dockItemColor(rightPagerHover.containsPress, rightPagerHover.containsMouse, false)
+                Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+            }
+
+            PC3.Label {
+                anchors.centerIn: parent
+                text: (rightDesktopBtn.desktopIndex + 1).toString()
+                color: rightDesktopBtn.isCurrent ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                font.pixelSize: Math.round(parent.height * 0.3)
+                font.bold: rightDesktopBtn.isCurrent
+            }
+
+            PC3.ToolTip {
+                visible: rightPagerHover.containsMouse
+                text: root.pagerDesktopName(rightDesktopBtn.desktopIndex)
+            }
+
+            MouseArea {
+                id: rightPagerHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (rightDesktopBtn.desktopId)
+                        root.folio.activateVirtualDesktop(rightDesktopBtn.desktopId)
+                }
+            }
         }
     }
 
@@ -1037,7 +1194,9 @@ MouseArea {
                 target: null
                 xAxis.enabled: true
                 yAxis.enabled: false
-                enabled: root.convergenceMode && taskDelegate.isLocationBottom && !folio.FolioSettings.lockLayout && taskDelegate.taskStorageId !== "" && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId)
+                // Enable for unpinned tasks (pin-to-dock drag) and for ALL tasks
+                // when the pager is showing so windows can be dragged to a desktop button.
+                enabled: root.convergenceMode && taskDelegate.isLocationBottom && !folio.FolioSettings.lockLayout && taskDelegate.taskStorageId !== "" && (root.showPager || !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId))
 
                 onActiveChanged: {
                     if (active) {
@@ -1050,7 +1209,12 @@ MouseArea {
                         root.taskPinTargetIndex = -1
                         root.taskPinStorageId = taskDelegate.taskStorageId
                     } else if (root.taskPinDragIndex === taskDelegate.index) {
-                        if (root.taskPinCanDrop) {
+                        // If released over a pager button, move the window to that desktop.
+                        let finalCenterX = root.taskBaseX(taskDelegate.index) + root.dockCellWidth / 2 + root.taskPinDragOffset
+                        let pagerDesktop = root.pagerButtonDesktopAt(finalCenterX)
+                        if (pagerDesktop && taskDelegate.model.IsVirtualDesktopsChangeable === true) {
+                            tasksModel.requestVirtualDesktops(tasksModel.makeModelIndex(taskDelegate.index), [pagerDesktop])
+                        } else if (root.taskPinCanDrop && !folio.FavouritesModel.containsApplication(root.taskPinStorageId)) {
                             folio.FavouritesModel.addApplicationAt(root.taskPinTargetIndex, root.taskPinStorageId)
                         }
                         root.clearTaskPinDrag()
@@ -1171,6 +1335,25 @@ MouseArea {
                         return (ids && ids.length > 1) ? i18n("Close All") : i18n("Close")
                     }
                     onClicked: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+
+                Controls.MenuSeparator {
+                    visible: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
+                }
+
+                Instantiator {
+                    model: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
+                           ? virtualDesktopInfo.desktopIds : []
+                    delegate: PC3.MenuItem {
+                        required property int index
+                        required property var modelData
+                        text: i18n("Move to %1", root.pagerDesktopName(index))
+                        enabled: String(modelData) !== String(virtualDesktopInfo.currentDesktop)
+                        onTriggered: tasksModel.requestVirtualDesktops(
+                            tasksModel.makeModelIndex(taskDelegate.index), [modelData])
+                    }
+                    onObjectAdded: (idx, obj) => taskContextMenu.insertItem(taskContextMenu.count, obj)
+                    onObjectRemoved: (idx, obj) => taskContextMenu.removeItem(obj)
                 }
             }
         }
