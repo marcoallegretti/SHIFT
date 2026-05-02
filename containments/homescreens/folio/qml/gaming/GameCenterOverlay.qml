@@ -422,8 +422,14 @@ Window {
         }
     }
 
-    // Cycle through source filter tabs.
-    readonly property var _sourceFilters: ["", "steam", "desktop", "waydroid", "lutris", "heroic"]
+    // Cycle through source filter tabs (only includes installed launcher sources).
+    readonly property var _sourceFilters: {
+        var filters = ["", "desktop", "waydroid"]
+        if (GamingShell.GameLauncherProvider.steamAvailable)  filters.splice(1, 0, "steam")
+        if (GamingShell.GameLauncherProvider.lutrisAvailable) filters.push("lutris")
+        if (GamingShell.GameLauncherProvider.heroicAvailable) filters.push("heroic")
+        return filters
+    }
     function cycleSourceFilter(direction) {
         var current = _sourceFilters.indexOf(
             GamingShell.GameLauncherProvider.sourceFilter)
@@ -749,35 +755,26 @@ Window {
                     id: sourceFilterBar
                     Layout.alignment: Qt.AlignVCenter
 
-                    QQC2.TabButton {
-                        text: i18n("All")
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = ""
-                    }
-                    QQC2.TabButton {
-                        text: "Steam"
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "steam"
-                    }
-                    QQC2.TabButton {
-                        text: i18n("Desktop")
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "desktop"
-                    }
-                    QQC2.TabButton {
-                        text: i18n("Waydroid")
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "waydroid"
-                    }
-                    QQC2.TabButton {
-                        text: "Lutris"
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "lutris"
-                    }
-                    QQC2.TabButton {
-                        text: "Heroic"
-                        width: implicitWidth
-                        onClicked: GamingShell.GameLauncherProvider.sourceFilter = "heroic"
+                    Repeater {
+                        model: {
+                            var tabs = [
+                                {label: i18n("All"),     filter: ""},
+                                {label: i18n("Desktop"), filter: "desktop"},
+                                {label: i18n("Waydroid"),filter: "waydroid"}
+                            ]
+                            if (GamingShell.GameLauncherProvider.steamAvailable)
+                                tabs.splice(1, 0, {label: "Steam",  filter: "steam"})
+                            if (GamingShell.GameLauncherProvider.lutrisAvailable)
+                                tabs.push({label: "Lutris",  filter: "lutris"})
+                            if (GamingShell.GameLauncherProvider.heroicAvailable)
+                                tabs.push({label: "Heroic",  filter: "heroic"})
+                            return tabs
+                        }
+                        QQC2.TabButton {
+                            text: modelData.label
+                            width: implicitWidth
+                            onClicked: GamingShell.GameLauncherProvider.sourceFilter = modelData.filter
+                        }
                     }
                 }
             }

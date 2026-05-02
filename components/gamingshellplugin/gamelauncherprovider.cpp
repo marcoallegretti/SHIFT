@@ -357,6 +357,21 @@ void GameLauncherProvider::refresh()
 
     m_allGames.clear();
 
+    // Detect which third-party launchers are installed
+    const bool steamWas = m_steamAvailable;
+    const bool lutrisWas = m_lutrisAvailable;
+    const bool heroicWas = m_heroicAvailable;
+    m_steamAvailable = detectLauncher(QStringLiteral("steam"),
+                                      {QStringLiteral("com.valvesoftware.Steam")},
+                                      {QDir::homePath() + QStringLiteral("/.steam/steam"),
+                                       QDir::homePath() + QStringLiteral("/.local/share/Steam"),
+                                       QDir::homePath() + QStringLiteral("/.var/app/com.valvesoftware.Steam/.local/share/Steam")});
+    m_lutrisAvailable =
+        detectLauncher(QStringLiteral("lutris"), {QStringLiteral("net.lutris.Lutris")}, {QDir::homePath() + QStringLiteral("/.local/share/lutris")});
+    m_heroicAvailable =
+        detectLauncher(QStringLiteral("heroic"), {QStringLiteral("com.heroicgameslauncher.hgl")}, {QDir::homePath() + QStringLiteral("/.config/heroic")});
+    if (m_steamAvailable != steamWas || m_lutrisAvailable != lutrisWas || m_heroicAvailable != heroicWas)
+        Q_EMIT launcherAvailabilityChanged();
     loadDesktopGames();
     loadSteamGames();
     loadLutrisGames();
@@ -902,6 +917,37 @@ bool GameLauncherProvider::overlayEnabled() const
 bool GameLauncherProvider::mangohudAvailable() const
 {
     return m_mangohudAvailable;
+}
+
+bool GameLauncherProvider::steamAvailable() const
+{
+    return m_steamAvailable;
+}
+
+bool GameLauncherProvider::lutrisAvailable() const
+{
+    return m_lutrisAvailable;
+}
+
+bool GameLauncherProvider::heroicAvailable() const
+{
+    return m_heroicAvailable;
+}
+
+// static
+bool GameLauncherProvider::detectLauncher(const QString &executable, const QStringList &flatpakAppIds, const QStringList &dataDirs)
+{
+    if (!QStandardPaths::findExecutable(executable).isEmpty())
+        return true;
+    for (const QString &appId : flatpakAppIds) {
+        if (QDir(QDir::homePath() + QStringLiteral("/.var/app/") + appId).exists())
+            return true;
+    }
+    for (const QString &dir : dataDirs) {
+        if (QDir(dir).exists())
+            return true;
+    }
+    return false;
 }
 
 int GameLauncherProvider::fpsLimit() const

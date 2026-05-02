@@ -27,6 +27,9 @@ class GameLauncherProvider : public QAbstractListModel
     Q_PROPERTY(QString sourceFilter READ sourceFilter WRITE setSourceFilter NOTIFY sourceFilterChanged)
     Q_PROPERTY(bool overlayEnabled READ overlayEnabled WRITE setOverlayEnabled NOTIFY overlayEnabledChanged)
     Q_PROPERTY(bool mangohudAvailable READ mangohudAvailable NOTIFY mangohudAvailableChanged)
+    Q_PROPERTY(bool steamAvailable READ steamAvailable NOTIFY launcherAvailabilityChanged)
+    Q_PROPERTY(bool lutrisAvailable READ lutrisAvailable NOTIFY launcherAvailabilityChanged)
+    Q_PROPERTY(bool heroicAvailable READ heroicAvailable NOTIFY launcherAvailabilityChanged)
     Q_PROPERTY(int fpsLimit READ fpsLimit WRITE setFpsLimit NOTIFY fpsLimitChanged)
     Q_PROPERTY(bool launchPending READ launchPending NOTIFY launchPendingChanged)
     Q_PROPERTY(QString pendingLaunchName READ pendingLaunchName NOTIFY launchPendingChanged)
@@ -61,6 +64,9 @@ public:
     bool overlayEnabled() const;
     void setOverlayEnabled(bool enabled);
     bool mangohudAvailable() const;
+    bool steamAvailable() const;
+    bool lutrisAvailable() const;
+    bool heroicAvailable() const;
     int fpsLimit() const;
     void setFpsLimit(int limit);
     bool launchPending() const;
@@ -89,6 +95,7 @@ Q_SIGNALS:
     void sourceFilterChanged();
     void overlayEnabledChanged();
     void mangohudAvailableChanged();
+    void launcherAvailabilityChanged();
     void fpsLimitChanged();
     void launchPendingChanged();
     void lastLaunchErrorChanged();
@@ -137,6 +144,11 @@ private:
     int m_fpsLimit = 0;
     bool m_mangohudAvailable = false;
     QString m_mangohudPath;
+    bool m_steamAvailable = false;
+    bool m_lutrisAvailable = false;
+    bool m_heroicAvailable = false;
+
+    static bool detectLauncher(const QString &executable, const QStringList &flatpakAppIds, const QStringList &dataDirs);
     QSet<QString> m_pinnedGames;
     bool m_launchPending = false;
     QString m_pendingLaunchName;
