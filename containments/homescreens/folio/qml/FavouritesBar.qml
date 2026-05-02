@@ -1016,21 +1016,21 @@ MouseArea {
         // Position above the hovered dock icon, in global coordinates
         x: {
             if (!targetDelegate) return 0
-            var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            var win = targetDelegate.Window.window
+            var win = root.Window.window
             var screenLeft = win && win.screen ? win.screen.virtualX : 0
             var screenRight = screenLeft + (win && win.screen ? win.screen.width : Screen.width)
-            var centered = delegateGlobal.x + (targetDelegate.width - width) / 2
-            return Math.max(screenLeft, Math.min(screenRight - width, centered))
+            // The dock window is full-width, anchored to the screen's left edge.
+            // targetDelegate.x is dock-local, so the global center of the icon is:
+            var globalCenter = screenLeft + targetDelegate.x + targetDelegate.width / 2
+            return Math.max(screenLeft, Math.min(screenRight - width, globalCenter - width / 2))
         }
         y: {
-            if (!targetDelegate) return 0
-            var delegateGlobal = targetDelegate.mapToGlobal(0, 0)
-            var win = targetDelegate.Window.window
+            var win = root.Window.window
             var screenTop = win && win.screen ? win.screen.virtualY : 0
             var screenBottom = screenTop + (win && win.screen ? win.screen.height : Screen.height)
-            var above = delegateGlobal.y - height - Kirigami.Units.smallSpacing
-            return Math.max(screenTop, Math.min(screenBottom - height, above))
+            // Dock is bottom-anchored; its top edge is at screenBottom - dock window height.
+            var dockTop = screenBottom - (win ? win.height : root.height)
+            return Math.max(screenTop, dockTop - height - Kirigami.Units.smallSpacing)
         }
 
         onShowingChanged: {
