@@ -20,6 +20,15 @@
 #include <QFile>
 #include <QFileInfo>
 
+namespace
+{
+bool isLegacyNextWallpaperPath(const QString &path)
+{
+    return path == QStringLiteral("Next") || path.startsWith(QStringLiteral("/usr/share/wallpapers/Next/"))
+        || path.startsWith(QStringLiteral("file:///usr/share/wallpapers/Next/"));
+}
+}
+
 WallpaperPlugin::WallpaperPlugin(QObject *parent)
     : QObject{parent}
     , m_homescreenConfig{new QQmlPropertyMap{this}}
@@ -183,6 +192,11 @@ QCoro::Task<void> WallpaperPlugin::setHomescreenWallpaper(const QString &path)
             qWarning() << "Failed to set wallpaper for screen" << screen << ":" << reply.error();
         }
     }
+
+    // Keep lockscreen wallpaper aligned with homescreen wallpaper selections.
+    if (!path.isEmpty()) {
+        setLockscreenWallpaper(path);
+    }
 }
 
 void WallpaperPlugin::setLockscreenWallpaper(const QString &path)
@@ -256,6 +270,14 @@ QCoro::Task<void> WallpaperPlugin::loadHomescreenSettings()
     // parse image configuration
     if (m_homescreenWallpaperPlugin == QStringLiteral("org.kde.image")) {
         m_homescreenWallpaperPath = map["Image"].toString();
+
+        // One-time migration for stale lockscreen wallpaper defaults.
+        const bool lockscreenUnset = m_lockscreenWallpaperPlugin.isEmpty() || m_lockscreenWallpaperPath.isEmpty();
+        const bool lockscreenLegacyNext =
+            m_lockscreenWallpaperPlugin == QStringLiteral("org.kde.image") && isLegacyNextWallpaperPath(m_lockscreenWallpaperPath);
+        if (!m_homescreenWallpaperPath.isEmpty() && m_lockscreenWallpaperPath != m_homescreenWallpaperPath && (lockscreenUnset || lockscreenLegacyNext)) {
+            setLockscreenWallpaper(m_homescreenWallpaperPath);
+        }
     }
 
     Q_EMIT homescreenConfigurationChanged();
