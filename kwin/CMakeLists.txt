@@ -2,5 +2,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 add_subdirectory(scripts)
+add_subdirectory(effects)
 add_subdirectory(decorations)
 add_subdirectory(mobiletaskswitcher)
