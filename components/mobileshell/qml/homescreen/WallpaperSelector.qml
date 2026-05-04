@@ -63,7 +63,14 @@ Controls.Drawer {
 
             background: Rectangle {
                 radius: Kirigami.Units.cornerRadius
-                color: Qt.rgba(255, 255, 255, (openSettings.down || openSettings.highlighted) ? 0.3 : 0.2)
+                Kirigami.Theme.inherit: false
+                Kirigami.Theme.colorSet: Kirigami.Theme.Window
+                color: Qt.rgba(
+                    Kirigami.Theme.backgroundColor.r,
+                    Kirigami.Theme.backgroundColor.g,
+                    Kirigami.Theme.backgroundColor.b,
+                    (openSettings.down || openSettings.highlighted) ? 0.9 : 0.75
+                )
 
                 Component.onCompleted: {
                     if (maskManager) {
@@ -77,8 +84,7 @@ Controls.Drawer {
                     anchors.centerIn: parent
                     implicitHeight: Kirigami.Units.iconSizes.large
                     implicitWidth: Kirigami.Units.iconSizes.large
-                    source: 'list-add'
-                    color: 'white'
+                    source: 'configure'
                 }
             }
 
@@ -151,7 +157,14 @@ Controls.Drawer {
             }
 
             background: Rectangle {
-                color: Qt.rgba(255, 255, 255, (delegate.down || delegate.highlighted) ? 0.4 : 0.2)
+                Kirigami.Theme.inherit: false
+                Kirigami.Theme.colorSet: Kirigami.Theme.Window
+                color: Qt.rgba(
+                    Kirigami.Theme.backgroundColor.r,
+                    Kirigami.Theme.backgroundColor.g,
+                    Kirigami.Theme.backgroundColor.b,
+                    (delegate.down || delegate.highlighted) ? 0.9 : 0.75
+                )
                 radius: Kirigami.Units.cornerRadius
 
                 Component.onCompleted: {
