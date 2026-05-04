@@ -924,6 +924,7 @@ ContainmentItem {
             maskManager: root.frontMaskManager
             horizontal: root.width > root.height
             edge: horizontal ? Qt.LeftEdge : Qt.BottomEdge
+            topMargin: horizontal ? folioHomeScreen.topMargin : 0
             bottomMargin: horizontal ? 0 : folioHomeScreen.bottomMargin
             leftMargin: horizontal ? folioHomeScreen.leftMargin : 0
             rightMargin: horizontal ? folioHomeScreen.rightMargin : 0
