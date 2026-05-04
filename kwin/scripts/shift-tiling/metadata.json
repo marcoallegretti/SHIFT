@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "marcoa@example.com",
+                "Name": "Marco Allegretti"
+            }
+        ],
+        "Description": "Dynamic tiling for SHIFT convergence mode. Automatically tiles windows using a BSP layout, with snap zones on drag and keyboard navigation.",
+        "EnabledByDefault": false,
+        "Id": "shift-tiling",
+        "License": "EUPL-1.2",
+        "Name": "SHIFT Dynamic Tiling",
+        "Version": "1.0"
+    },
+    "X-KDE-ConfigModule": "kwin/effects/configs/kcm_kwin4_genericscripted",
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}

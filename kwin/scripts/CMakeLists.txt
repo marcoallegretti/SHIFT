@@ -10,4 +10,5 @@ function(add_kwin_script name source)
 endfunction()
 
 add_kwin_script(convergentwindows convergentwindows)
+add_kwin_script(shift-tiling shift-tiling)
 
