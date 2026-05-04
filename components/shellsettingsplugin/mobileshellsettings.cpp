@@ -46,6 +46,7 @@ MobileShellSettings::MobileShellSettings(QObject *parent)
             Q_EMIT autoHidePanelsEnabledChanged();
             Q_EMIT gamingModeEnabledChanged();
             Q_EMIT gamingDismissHintEnabledChanged();
+            Q_EMIT dynamicTilingEnabledChanged();
             Q_EMIT allowLogoutChanged();
         }
         if (group.name() == LOCKSCREEN_CONFIG_GROUP) {
@@ -273,6 +274,19 @@ void MobileShellSettings::setGamingDismissHintEnabled(bool enabled)
 {
     auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
     group.writeEntry("gamingDismissHintEnabled", enabled, KConfigGroup::Notify);
+    m_config->sync();
+}
+
+bool MobileShellSettings::dynamicTilingEnabled() const
+{
+    auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
+    return group.readEntry("dynamicTilingEnabled", true);
+}
+
+void MobileShellSettings::setDynamicTilingEnabled(bool enabled)
+{
+    auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
+    group.writeEntry("dynamicTilingEnabled", enabled, KConfigGroup::Notify);
     m_config->sync();
 }
 

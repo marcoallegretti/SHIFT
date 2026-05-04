@@ -56,6 +56,10 @@ class MobileShellSettings : public QObject
     Q_PROPERTY(bool gamingModeEnabled READ gamingModeEnabled WRITE setGamingModeEnabled NOTIFY gamingModeEnabledChanged)
     Q_PROPERTY(bool gamingDismissHintEnabled READ gamingDismissHintEnabled WRITE setGamingDismissHintEnabled NOTIFY gamingDismissHintEnabledChanged)
 
+    // Dynamic (BSP) window tiling — only meaningful in convergence mode.
+    // When false, KWin's native quick-tile behaviour is used unmodified.
+    Q_PROPERTY(bool dynamicTilingEnabled READ dynamicTilingEnabled WRITE setDynamicTilingEnabled NOTIFY dynamicTilingEnabledChanged)
+
     // logout dialog
     Q_PROPERTY(bool allowLogout READ allowLogout READ allowLogout NOTIFY allowLogoutChanged)
 
@@ -275,6 +279,14 @@ public:
     void setGamingDismissHintEnabled(bool enabled);
 
     /**
+     * Whether the SHIFT BSP dynamic tiling script is active.
+     * Defaults to true; only takes effect in convergence mode (and when
+     * gaming mode is off).
+     */
+    bool dynamicTilingEnabled() const;
+    void setDynamicTilingEnabled(bool enabled);
+
+    /**
      * Whether logout button is shown in the logout/shutdown dialog.
      */
     bool allowLogout() const;
@@ -322,6 +334,7 @@ Q_SIGNALS:
     void autoHidePanelsEnabledChanged();
     void gamingModeEnabledChanged();
     void gamingDismissHintEnabledChanged();
+    void dynamicTilingEnabledChanged();
     void allowLogoutChanged();
     void lockscreenLeftButtonActionChanged();
     void lockscreenRightButtonActionChanged();

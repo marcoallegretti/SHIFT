@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "KPackage/GenericQML",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "marco@lateuf.it",
+                "Name": "Marco Allegretti"
+            }
+        ],
+        "Description": "Quick setting to toggle SHIFT dynamic (BSP) window tiling in convergence mode",
+        "Icon": "view-grid-symbolic",
+        "Id": "org.kde.plasma.quicksetting.dynamictiling",
+        "License": "LGPL",
+        "Name": "Dynamic Tiling",
+        "Website": "https://kde.org"
+    }
+}
