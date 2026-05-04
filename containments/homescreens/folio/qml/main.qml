@@ -279,7 +279,7 @@ ContainmentItem {
         visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
         color: "transparent"
         width: Screen.width
-        height: Kirigami.Units.gridUnit * 3
+        height: MobileShell.Constants.convergenceDockHeight
 
         LayerShell.Window.scope: "dock-overlay"
         LayerShell.Window.layer: LayerShell.Window.LayerTop
@@ -290,11 +290,11 @@ ContainmentItem {
         // Auto-hide: slide dock content off-screen when a window is
         // maximized.  The reveal strip at the screen edge brings it back.
         property real dockOffset: 0
-        readonly property real dockHeight: Kirigami.Units.gridUnit * 3
+        readonly property real dockHeight: MobileShell.Constants.convergenceDockHeight
 
         // Height of the input-receive strip kept at the screen edge when
         // the dock is hidden.  Matches the navigation panel convention.
-        readonly property real revealStripHeight: Kirigami.Units.gridUnit
+        readonly property real revealStripHeight: MobileShell.Constants.convergenceDockRevealHeight
 
         // True once the hover-reveal timer fires; cleared on hover-exit.
         property bool hoverRevealing: false
@@ -353,10 +353,10 @@ ContainmentItem {
 
         Rectangle {
             anchors.fill: parent
+            visible: !dockOverlay.shouldHide || dockOverlay.dockOffset < dockOverlay.dockHeight
             Kirigami.Theme.inherit: false
             Kirigami.Theme.colorSet: Kirigami.Theme.Window
             color: Kirigami.Theme.backgroundColor
-            transform: Translate { y: dockOverlay.dockOffset }
         }
 
         FavouritesBar {
@@ -408,7 +408,7 @@ ContainmentItem {
 
             readonly property real popupWidth: Math.min(Kirigami.Units.gridUnit * 28, parent.width * 0.5)
             readonly property real popupHeight: Math.min(Kirigami.Units.gridUnit * 32, parent.height * 0.7)
-            readonly property real dockHeight: Kirigami.Units.gridUnit * 3
+            readonly property real dockHeight: MobileShell.Constants.convergenceDockHeight
 
             width: popupWidth
             height: popupHeight

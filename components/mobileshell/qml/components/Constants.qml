@@ -31,6 +31,8 @@ QtObject {
         ? 0
         : Kirigami.Units.gridUnit * 2
     readonly property real defaultGesturePanelThickness: Kirigami.Units.gridUnit
+    readonly property real convergenceDockHeight: Kirigami.Units.gridUnit * 3
+    readonly property real convergenceDockRevealHeight: Kirigami.Units.gridUnit
 
     readonly property real navigationPanelThickness: {
         if (!ShellSettings.Settings.navigationPanelEnabled) {

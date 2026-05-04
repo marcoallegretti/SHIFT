@@ -382,8 +382,8 @@ Item {
                     visible: opacity > 0 && !ShellSettings.Settings.convergenceModeEnabled
 
                     // one is ignored as anchors are set
-                    height: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
-                    width: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
+                    height: ShellSettings.Settings.convergenceModeEnabled ? MobileShell.Constants.convergenceDockHeight : Kirigami.Units.gridUnit * 6
+                    width: ShellSettings.Settings.convergenceModeEnabled ? MobileShell.Constants.convergenceDockHeight : Kirigami.Units.gridUnit * 6
 
                     anchors.topMargin: root.topMargin
                     anchors.bottomMargin: ShellSettings.Settings.convergenceModeEnabled ? 0 : root.bottomMargin
@@ -439,7 +439,7 @@ Item {
                             }
                             PropertyChanges {
                                 target: favouritesBar
-                                height: ShellSettings.Settings.convergenceModeEnabled ? Kirigami.Units.gridUnit * 3 : Kirigami.Units.gridUnit * 6
+                                height: ShellSettings.Settings.convergenceModeEnabled ? MobileShell.Constants.convergenceDockHeight : Kirigami.Units.gridUnit * 6
                             }
                         }, State {
                             name: "left"
