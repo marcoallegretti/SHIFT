@@ -25,8 +25,8 @@ Image=SHIFT
 cursorTheme=breeze_cursors
 
 [kwinrc][org.kde.kdecoration2]
-library=org.kde.breeze
-theme=Shift Dark
+library=org.kde.kwin.aurorae
+theme=org.shift.decoration
 
 [KSplash]
 Theme=org.kde.Breeze
