@@ -79,53 +79,6 @@ Item {
         }
     }
 
-    component PanelIconButton: MouseArea {
-        id: button
-
-        property string iconName
-        property string toolTipText
-        property bool checked: false
-
-        signal triggered()
-
-        width: Kirigami.Units.iconSizes.smallMedium + Kirigami.Units.smallSpacing * 2
-        height: width
-        hoverEnabled: enabled
-        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-        opacity: enabled ? 1 : 0.35
-
-        onClicked: button.triggered()
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Kirigami.Units.cornerRadius
-            color: button.containsPress
-                ? root.mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.16)
-                : button.checked
-                    ? root.mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, button.containsMouse ? 0.22 : 0.16)
-                    : button.containsMouse
-                        ? root.mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.08)
-                        : "transparent"
-
-            Behavior on color {
-                ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
-            }
-        }
-
-        Kirigami.Icon {
-            anchors.centerIn: parent
-            width: Kirigami.Units.iconSizes.small
-            height: width
-            source: button.iconName
-            active: button.containsMouse || button.checked
-        }
-
-        PC3.ToolTip {
-            text: button.toolTipText
-            visible: button.containsMouse && button.toolTipText.length > 0
-        }
-    }
-
     TaskManager.VirtualDesktopInfo { id: virtualDesktopInfo }
     TaskManager.ActivityInfo { id: activityInfo }
 
@@ -692,7 +645,7 @@ Item {
 
                         Item { Layout.fillWidth: true }
 
-                        PanelIconButton {
+                        RunningAppsPanelButton {
                             iconName: taskCard.pinned ? "emblem-favorite" : "window-pin"
                             toolTipText: taskCard.pinned ? i18n("Pinned") : i18n("Pin to Dock")
                             checked: taskCard.pinned
@@ -700,20 +653,20 @@ Item {
                             onTriggered: root.folio.FavouritesModel.addApplication(taskCard.storageId)
                         }
 
-                        PanelIconButton {
+                        RunningAppsPanelButton {
                             iconName: taskCard.minimizedTask ? "window-restore" : "window-minimize"
                             toolTipText: taskCard.minimizedTask ? i18n("Restore") : i18n("Minimize")
                             onTriggered: tasksModel.requestToggleMinimized(taskCard.modelIndex)
                         }
 
-                        PanelIconButton {
+                        RunningAppsPanelButton {
                             iconName: taskCard.maximizedTask ? "window-restore" : "window-maximize"
                             toolTipText: taskCard.maximizedTask ? i18n("Restore") : i18n("Maximize")
                             enabled: !taskCard.groupTask
                             onTriggered: tasksModel.requestToggleMaximized(taskCard.modelIndex)
                         }
 
-                        PanelIconButton {
+                        RunningAppsPanelButton {
                             iconName: "window-close"
                             toolTipText: taskCard.winIds.length > 1 ? i18n("Close All") : i18n("Close")
                             onTriggered: tasksModel.requestClose(taskCard.modelIndex)
