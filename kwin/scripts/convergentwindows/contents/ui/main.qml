@@ -53,13 +53,13 @@ Loader {
     }
 
     function run(window) {
-        // HACK: don't maximize xwaylandvideobridge
-        // see: https://invent.kde.org/plasma/plasma-mobile/-/issues/324
-        if (window.resourceClass === 'xwaylandvideobridge') {
+        if (!window || window.deleted || !window.normalWindow) {
             return;
         }
 
-        if (!window.normalWindow) {
+        // HACK: don't maximize xwaylandvideobridge
+        // see: https://invent.kde.org/plasma/plasma-mobile/-/issues/324
+        if (window.resourceClass === 'xwaylandvideobridge') {
             return;
         }
 
