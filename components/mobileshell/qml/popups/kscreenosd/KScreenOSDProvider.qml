@@ -16,22 +16,22 @@ QtObject {
     id: component
 
     property bool initialConvergenceMode: false
+    property bool wasDocked: false
 
     property var apiListener: Connections {
         target: KScreenOSDUtil
         function onOutputsChanged() {
-            if (KScreenOSDUtil.outputs > 1) {
+            const docked = KScreenOSDUtil.outputs > 1;
+            if (docked && !wasDocked) {
                 initialConvergenceMode = ShellSettings.Settings.convergenceModeEnabled;
             }
--            console.log("KScreenOSDProvider convergenceModeEnabled: "
--                        + (KScreenOSDUtil.outputs > 1 ? "true" : (initialConvergenceMode ? "TRUE" : "FALSE")));
-            ShellSettings.Settings.convergenceModeEnabled = KScreenOSDUtil.outputs > 1 ? true : initialConvergenceMode;
+            ShellSettings.Settings.convergenceModeEnabled = docked ? true : initialConvergenceMode;
+            wasDocked = docked;
         }
     }
 
     Component.onCompleted: {
-        if (KScreenOSDUtil.outputs < 2) {
-            initialConvergenceMode = ShellSettings.Settings.convergenceModeEnabled;
-        }
+        wasDocked = KScreenOSDUtil.outputs > 1;
+        initialConvergenceMode = ShellSettings.Settings.convergenceModeEnabled;
     }
 }
