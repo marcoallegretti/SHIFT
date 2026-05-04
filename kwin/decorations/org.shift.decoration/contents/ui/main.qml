@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025 SHIFT Contributors
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-FileCopyrightText: 2026 Marco Allegretti
+// SPDX-License-Identifier: EUPL 1.2
 
 import QtQuick
 import org.kde.kwin.decoration
@@ -180,6 +180,11 @@ Decoration {
             default: return "";
             }
         }
+
+        // Snap-assist hover trigger lives in the shift-tiling KWin script:
+        // the decoration QML sandbox has no DBus / kglobalaccel access, so
+        // the script polls the cursor over the active window's titlebar
+        // and invokes the SHIFT Snap Assist shortcut after a short hover.
 
         Rectangle {
             visible: !isSpacer

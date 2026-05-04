@@ -1,6 +1,5 @@
-# SPDX-FileCopyrightText: 2025 SHIFT Contributors
-# SPDX-License-Identifier: GPL-2.0-or-later
-
+# SPDX-FileCopyrightText: 2026 Marco Allegretti <
+# SPDX-License-Identifier: EUPL-1.2
 install(
     DIRECTORY org.shift.decoration
     DESTINATION ${KDE_INSTALL_DATADIR}/kwin/decorations
