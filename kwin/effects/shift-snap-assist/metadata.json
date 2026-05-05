@@ -8,7 +8,7 @@
             }
         ],
         "Category": "Appearance",
-        "Description": "Windows 11-style snap layout picker for SHIFT convergence mode. Activated by hovering the maximize button or pressing Meta+Shift+S.",
+        "Description": "Windows 11-style snap layout picker for SHIFT convergence mode with native window placement. Activated by hovering the maximize button or pressing Meta+Shift+S when dynamic tiling is off.",
         "EnabledByDefault": false,
         "Id": "shift-snap-assist",
         "License": "EUPL-1.2",

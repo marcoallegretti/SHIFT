@@ -181,10 +181,9 @@ Decoration {
             }
         }
 
-        // Snap-assist hover trigger lives in the shift-tiling KWin script:
-        // the decoration QML sandbox has no DBus / kglobalaccel access, so
-        // the script polls the cursor over the active window's titlebar
-        // and invokes the SHIFT Snap Assist shortcut after a short hover.
+        // Snap-layout hover activation lives in the SHIFT Snap Assist effect.
+        // The decoration only renders the maximize button; the effect decides
+        // when maximize-hover is eligible and shows the popup.
 
         Rectangle {
             visible: !isSpacer

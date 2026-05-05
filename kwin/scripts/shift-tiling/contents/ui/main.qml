@@ -595,67 +595,6 @@ Item {
         }
     }
 
-    // ── Snap-assist hover trigger ─────────────────────────────────────────
-    //
-    // The decoration QML sandbox has no DBus / kglobalaccel access, so we
-    // detect the maximize-button hover here in the script.  We poll the
-    // cursor every 150 ms; when it stays in the top-right ~50×barHeight
-    // strip of the active window for 500 ms (without dragging), we invoke
-    // the SHIFT Snap Assist effect via kglobalaccel.
-    //
-    // Constants must match the decoration:
-    //   barHeight 30, btnSize 16, btnSpacing 8, btnSideMargin 12.
-    // Right-cluster width ≈ 12 (margin) + 3·(16+8) = ~84 px.  We use 90 px
-    // to be forgiving.
-
-    readonly property int hoverBarHeight:    30
-    readonly property int hoverButtonStrip:  90
-    property var  hoverWindowId: null
-    property int  hoverTicks:    0
-
-    Timer {
-        id: snapHoverTimer
-        interval: 150
-        repeat: true
-        running: root.tilingEnabled && root.isConvergence()
-
-        onTriggered: {
-            // Don't fire while dragging or while no window is focused.
-            if (root.draggingWindow) { root.hoverTicks = 0; root.hoverWindowId = null; return; }
-            const win = KWinComponents.Workspace.activeWindow;
-            if (!win || !win.normalWindow || win.fullScreen) {
-                root.hoverTicks = 0; root.hoverWindowId = null; return;
-            }
-            const cursor = KWinComponents.Workspace.cursorPos;
-            const fg = win.frameGeometry;
-            // Right-side titlebar strip in absolute coords.
-            const stripX = fg.x + fg.width - root.hoverButtonStrip;
-            const stripY = fg.y;
-            if (cursor.x >= stripX && cursor.x <= fg.x + fg.width &&
-                cursor.y >= stripY && cursor.y <= stripY + root.hoverBarHeight) {
-                if (root.hoverWindowId === win.internalId) {
-                    root.hoverTicks++;
-                    // 500 ms ≈ 4 ticks at 150 ms (3 + 1 to be safe).
-                    if (root.hoverTicks === 4) {
-                        callDBus(
-                            "org.kde.kglobalaccel",
-                            "/component/kwin",
-                            "org.kde.kglobalaccel.Component",
-                            "invokeShortcut",
-                            "SHIFT Snap Assist"
-                        );
-                    }
-                } else {
-                    root.hoverWindowId = win.internalId;
-                    root.hoverTicks = 1;
-                }
-            } else {
-                root.hoverTicks = 0;
-                root.hoverWindowId = null;
-            }
-        }
-    }
-
     // ── Right-click menu ──────────────────────────────────────────────────
 
     // Note: registerUserActionsMenu is a global function in KWin JS scripts.
