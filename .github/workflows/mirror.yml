@@ -1,0 +1,30 @@
+name: Mirror from KDE
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  mirror_to_github:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Sync from KDE
+        run: |
+          # Configura l'utente
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          
+
+          git remote add kde https://invent.kde.org/marcoa/shift-shell.git
+          git fetch kde
+          
+          git checkout master
+          git merge kde/master --allow-unrelated-histories -X ours
+          
+          git push origin master
