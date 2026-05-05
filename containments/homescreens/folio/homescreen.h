@@ -34,6 +34,7 @@ class HomeScreen : public Plasma::Containment
 {
     Q_OBJECT
     QML_ELEMENT
+    QML_UNCREATABLE("HomeScreen is provided by the folio containment")
 
     Q_PROPERTY(FolioSettings *FolioSettings READ folioSettings CONSTANT)
     Q_PROPERTY(HomeScreenState *HomeScreenState READ homeScreenState CONSTANT)
