@@ -10,6 +10,7 @@ kcoreaddons_add_plugin(kded_plasma_mobile_start SOURCES ${kded_plasma_mobile_sta
 target_link_libraries(kded_plasma_mobile_start PRIVATE
     Qt::Core
     KF6::DBusAddons
+    KF6::ConfigCore
     KF6::KIOGui
     KF6::JobWidgets
     KF6::Package

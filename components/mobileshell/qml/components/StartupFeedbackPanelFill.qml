@@ -25,6 +25,29 @@ Rectangle {
         easing.type: Easing.OutExpo
     }
 
+    // Auto-clear safety net.
+    //
+    // The colored fill is normally cleared by onShowingWindowChanged when
+    // the launched app's maximized state toggles.  In convergence mode apps
+    // launch centered (kwinrc Placement=Centered), so showingWindow may
+    // never flip to true and the change-based cleanup never fires — the
+    // band would otherwise remain on the panel indefinitely.
+    //
+    // This timer runs after every panel-fill animation and clears the
+    // rectangle if no maximized/fullscreen window is present, restoring
+    // the original mobile behaviour while fixing the convergence path.
+    Timer {
+        id: autoClearTimer
+        interval: 600 // animation duration (200) + settle time
+        repeat: false
+        onTriggered: {
+            if (!root.maximizedTracker || !root.maximizedTracker.showingWindow) {
+                root.color = 'transparent';
+                root.height = 0;
+            }
+        }
+    }
+
     // Reset when maximized window state changes
     Connections {
         target: maximizedTracker
@@ -46,6 +69,7 @@ Rectangle {
 
             root.color = color;
             heightAnim.restart();
+            autoClearTimer.restart();
         }
     }
 }

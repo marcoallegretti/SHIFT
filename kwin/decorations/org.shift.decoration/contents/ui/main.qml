@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2025 SHIFT Contributors
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-FileCopyrightText: 2026 Marco Allegretti
+// SPDX-License-Identifier: EUPL 1.2
 
 import QtQuick
 import org.kde.kwin.decoration
@@ -180,6 +180,10 @@ Decoration {
             default: return "";
             }
         }
+
+        // Snap-layout hover activation lives in the SHIFT Snap Assist effect.
+        // The decoration only renders the maximize button; the effect decides
+        // when maximize-hover is eligible and shows the popup.
 
         Rectangle {
             visible: !isSpacer

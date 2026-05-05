@@ -20,6 +20,8 @@ class KWinSettings : public QObject
 
     Q_PROPERTY(bool doubleTapWakeup READ doubleTapWakeup WRITE setDoubleTapWakeup NOTIFY doubleTapWakeupChanged)
     Q_PROPERTY(int screenEdgeTouchTarget READ screenEdgeTouchTarget WRITE setScreenEdgeTouchTarget NOTIFY screenEdgeTouchTargetChanged)
+    Q_PROPERTY(QString titleButtonsOnLeft READ titleButtonsOnLeft NOTIFY titleButtonsChanged)
+    Q_PROPERTY(QString titleButtonsOnRight READ titleButtonsOnRight NOTIFY titleButtonsChanged)
 
 public:
     KWinSettings(QObject *parent = nullptr);
@@ -48,9 +50,20 @@ public:
      */
     void setScreenEdgeTouchTarget(int target);
 
+    /**
+     * Configured KWin titlebar buttons on the left side.
+     */
+    QString titleButtonsOnLeft() const;
+
+    /**
+     * Configured KWin titlebar buttons on the right side.
+     */
+    QString titleButtonsOnRight() const;
+
 Q_SIGNALS:
     void doubleTapWakeupChanged();
     void screenEdgeTouchTargetChanged();
+    void titleButtonsChanged();
 
 private:
     KConfigWatcher::Ptr m_configWatcher;

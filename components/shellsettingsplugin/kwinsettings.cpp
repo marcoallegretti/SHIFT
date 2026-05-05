@@ -13,6 +13,7 @@ const QString CONFIG_FILE = QStringLiteral("kwinrc");
 const QString OVERLAY_CONFIG_FILE = QStringLiteral("plasma-mobile/kwinrc");
 const QString WAYLAND_CONFIG_GROUP = QStringLiteral("Wayland");
 const QString SCREEN_EDGES_CONFIG_GROUP = QStringLiteral("ScreenEdges");
+const QString DECORATION_CONFIG_GROUP = QStringLiteral("org.kde.kdecoration2");
 
 KWinSettings::KWinSettings(QObject *parent)
     : QObject{parent}
@@ -26,6 +27,8 @@ KWinSettings::KWinSettings(QObject *parent)
             Q_EMIT doubleTapWakeupChanged();
         } else if (group.name() == SCREEN_EDGES_CONFIG_GROUP) {
             Q_EMIT screenEdgeTouchTargetChanged();
+        } else if (group.name() == DECORATION_CONFIG_GROUP) {
+            Q_EMIT titleButtonsChanged();
         }
     });
 }
@@ -63,4 +66,16 @@ void KWinSettings::setScreenEdgeTouchTarget(int target)
         QDBusMessage message = QDBusMessage::createSignal(QStringLiteral("/KWin"), QStringLiteral("org.kde.KWin"), QStringLiteral("reloadConfig"));
         QDBusConnection::sessionBus().send(message);
     }
+}
+
+QString KWinSettings::titleButtonsOnLeft() const
+{
+    auto group = KConfigGroup{m_config, DECORATION_CONFIG_GROUP};
+    return group.readEntry("ButtonsOnLeft", QStringLiteral("MSE"));
+}
+
+QString KWinSettings::titleButtonsOnRight() const
+{
+    auto group = KConfigGroup{m_config, DECORATION_CONFIG_GROUP};
+    return group.readEntry("ButtonsOnRight", QStringLiteral("HIAX"));
 }
