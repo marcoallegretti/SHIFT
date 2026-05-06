@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Marco Allegretti
-// SPDX-License-Identifier: EUPL 1.2
+// SPDX-License-Identifier: EUPL-1.2
 
 import QtQuick
 import org.kde.kwin.decoration
