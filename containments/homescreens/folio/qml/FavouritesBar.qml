@@ -36,13 +36,18 @@ MouseArea {
     readonly property int totalItemCount: repeater.count + (showRunningTasks ? taskRepeater.count : 0)
 
     // In convergence mode, size icons to fit the dock bar instead of using page grid cells
-    readonly property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
-    readonly property real dockCellHeight: convergenceMode ? root.height : folio.HomeScreenState.pageCellHeight
+    property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
+    property real dockCellHeight: convergenceMode ? root.height : folio.HomeScreenState.pageCellHeight
+    Behavior on dockCellWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockCellHeight { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     // Navigation buttons width (used to offset center positioning)
-    readonly property real navButtonWidth: convergenceMode ? root.height : 0
-    readonly property real dockItemInset: convergenceMode ? Math.max(2, Kirigami.Units.smallSpacing / 2) : 0
-    readonly property real dockIconSize: Math.min(root.height * 0.56, Kirigami.Units.iconSizes.large)
+    property real navButtonWidth: convergenceMode ? root.height : 0
+    property real dockItemInset: convergenceMode ? Math.max(2, Kirigami.Units.smallSpacing / 2) : 0
+    property real dockIconSize: Math.min(root.height * 0.56, Kirigami.Units.iconSizes.large)
+    Behavior on navButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockItemInset { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockIconSize { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     function dockItemColor(pressed, hovered, active) {
         if (pressed) {
@@ -90,16 +95,46 @@ MouseArea {
 
     // Virtual desktop pager (convergence mode, 2+ desktops)
     readonly property bool showPager: convergenceMode && virtualDesktopInfo.numberOfDesktops > 1
-    readonly property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
+    property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
     readonly property int pagerLeftCount: showPager ? Math.ceil(virtualDesktopInfo.numberOfDesktops / 2) : 0
     readonly property int pagerRightCount: showPager ? virtualDesktopInfo.numberOfDesktops - pagerLeftCount : 0
-    readonly property real trashButtonWidth: convergenceMode ? root.height : 0
+    property real trashButtonWidth: convergenceMode ? root.height : 0
+    Behavior on pagerButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on trashButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     function pagerDesktopName(index) {
         let names = virtualDesktopInfo.desktopNames
         if (names && index < names.length && String(names[index]).length > 0)
             return String(names[index])
         return i18n("Desktop %1", index + 1)
+    }
+
+    function pagerDesktopNameForId(desktopId) {
+        let ids = virtualDesktopInfo.desktopIds
+        if (!ids) {
+            return ""
+        }
+        for (let i = 0; i < ids.length; ++i) {
+            if (String(ids[i]) === String(desktopId)) {
+                return root.pagerDesktopName(i)
+            }
+        }
+        return ""
+    }
+
+    function menuDesktopIds(isOnAllDesktops) {
+        let ids = virtualDesktopInfo.desktopIds
+        if (!ids || ids.length <= 1) {
+            return []
+        }
+
+        let result = []
+        for (let i = 0; i < ids.length; ++i) {
+            if (isOnAllDesktops || String(ids[i]) !== String(virtualDesktopInfo.currentDesktop)) {
+                result.push(ids[i])
+            }
+        }
+        return result
     }
 
     // Returns the desktop ID of the pager button under screen-space x, or ""
@@ -176,13 +211,19 @@ MouseArea {
     // Home button (convergence mode, left end)
     Rectangle {
         id: homeButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Home")
@@ -235,13 +276,19 @@ MouseArea {
     // Overview button (convergence mode, right end)
     Rectangle {
         id: overviewButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Overview")
@@ -452,13 +499,19 @@ MouseArea {
 
     Rectangle {
         id: trashButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         x: root.width - root.navButtonWidth - root.trashButtonWidth
         y: 0
         width: root.trashButtonWidth
         height: root.height
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Trash")
@@ -1228,6 +1281,10 @@ MouseArea {
 
             readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
             readonly property string taskStorageId: root.runningTaskStorageId(taskDelegate.model)
+            readonly property bool isGroupParent: taskDelegate.model.IsGroupParent === true
+            readonly property bool dynamicTilingActive: root.convergenceMode && ShellSettings.Settings.dynamicTilingEnabled
+            readonly property bool showFreeGeometryActions: !taskDelegate.isGroupParent && !taskDelegate.dynamicTilingActive
+            readonly property bool canChangeVirtualDesktops: taskDelegate.model.IsVirtualDesktopsChangeable === true
 
             Accessible.role: Accessible.Button
             Accessible.name: taskDelegate.model.display || ""
@@ -1431,23 +1488,79 @@ MouseArea {
                 popupType: T.Popup.Window
 
                 PC3.MenuItem {
+                    icon.name: "window-new"
+                    text: i18n("Open New Window")
+                    visible: taskDelegate.model.CanLaunchNewInstance === true
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestNewInstance(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
                     icon.name: "window-pin"
                     text: i18n("Pin to Dock")
                     // repeater.count dependency forces re-evaluation when favourites change
                     visible: taskDelegate.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId)
+                    height: visible ? implicitHeight : 0
                     enabled: !folio.FolioSettings.lockLayout
                     onClicked: folio.FavouritesModel.addApplication(taskDelegate.taskStorageId)
+                }
+
+                Controls.MenuSeparator {
+                    visible: taskDelegate.model.CanLaunchNewInstance === true
+                             || (taskDelegate.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId))
+                    height: visible ? implicitHeight : 0
+                }
+
+                PC3.MenuItem {
+                    icon.name: "transform-move"
+                    text: i18n("Move")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsMovable === true
+                    onClicked: tasksModel.requestMove(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "transform-scale"
+                    text: i18n("Resize")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsResizable === true
+                    onClicked: tasksModel.requestResize(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
                     text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                    enabled: taskDelegate.model.IsMinimizable === true
                     onClicked: tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
                     text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
-                    visible: taskDelegate.model.IsGroupParent !== true
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsMaximizable === true
                     onClicked: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "window-keep-above"
+                    text: taskDelegate.model.IsKeepAbove ? i18n("Do Not Keep Above Others") : i18n("Keep Above Others")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestToggleKeepAbove(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "window-keep-below"
+                    text: taskDelegate.model.IsKeepBelow ? i18n("Do Not Keep Below Others") : i18n("Keep Below Others")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestToggleKeepBelow(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "view-fullscreen"
+                    text: taskDelegate.model.IsFullScreen ? i18n("Leave Fullscreen") : i18n("Fullscreen")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsFullScreenable === true
+                    onClicked: tasksModel.requestToggleFullScreen(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: "window-close"
@@ -1455,26 +1568,41 @@ MouseArea {
                         var ids = taskDelegate.model.WinIdList
                         return (ids && ids.length > 1) ? i18n("Close All") : i18n("Close")
                     }
+                    enabled: taskDelegate.model.IsClosable === true
                     onClicked: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
                 }
 
                 Controls.MenuSeparator {
-                    visible: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
+                    visible: taskDelegate.canChangeVirtualDesktops
+                    height: visible ? implicitHeight : 0
+                }
+
+                PC3.MenuItem {
+                    icon.name: "virtual-desktops"
+                    text: taskDelegate.model.IsOnAllVirtualDesktops ? i18n("Show Only on Current Desktop") : i18n("Show on All Desktops")
+                    visible: taskDelegate.canChangeVirtualDesktops && virtualDesktopInfo.numberOfDesktops > 1
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestVirtualDesktops(tasksModel.makeModelIndex(taskDelegate.index),
+                        taskDelegate.model.IsOnAllVirtualDesktops ? [virtualDesktopInfo.currentDesktop] : [])
                 }
 
                 Instantiator {
-                    model: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
-                           ? virtualDesktopInfo.desktopIds : []
+                    model: root.showPager && taskDelegate.canChangeVirtualDesktops ? root.menuDesktopIds(taskDelegate.model.IsOnAllVirtualDesktops === true) : []
                     delegate: PC3.MenuItem {
-                        required property int index
                         required property var modelData
-                        text: i18n("Move to %1", root.pagerDesktopName(index))
-                        enabled: String(modelData) !== String(virtualDesktopInfo.currentDesktop)
+                        text: i18n("Move to %1", root.pagerDesktopNameForId(modelData))
                         onTriggered: tasksModel.requestVirtualDesktops(
                             tasksModel.makeModelIndex(taskDelegate.index), [modelData])
                     }
                     onObjectAdded: (idx, obj) => taskContextMenu.insertItem(taskContextMenu.count, obj)
                     onObjectRemoved: (idx, obj) => taskContextMenu.removeItem(obj)
+                }
+                PC3.MenuItem {
+                    icon.name: "list-add"
+                    text: i18n("Move to New Desktop")
+                    visible: taskDelegate.canChangeVirtualDesktops
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestNewVirtualDesktop(tasksModel.makeModelIndex(taskDelegate.index))
                 }
             }
         }

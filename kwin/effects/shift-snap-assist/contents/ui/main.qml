@@ -24,6 +24,7 @@ KWinComponents.SceneEffect {
     readonly property bool snapLayoutsEligible: ShellSettings.Settings.convergenceModeEnabled
                                              && !ShellSettings.Settings.gamingModeEnabled
                                              && !ShellSettings.Settings.dynamicTilingEnabled
+                                             && ShellSettings.Settings.snapLayoutsEnabled
     readonly property int hoverBarHeight: 30
     readonly property int decorationButtonSize: 16
     readonly property int decorationButtonSpacing: 8
@@ -368,6 +369,12 @@ KWinComponents.SceneEffect {
         }
 
         function onDynamicTilingEnabledChanged() {
+            if (!effect.snapLayoutsEligible) {
+                effect.hideSnapLayouts();
+            }
+        }
+
+        function onSnapLayoutsEnabledChanged() {
             if (!effect.snapLayoutsEligible) {
                 effect.hideSnapLayouts();
             }

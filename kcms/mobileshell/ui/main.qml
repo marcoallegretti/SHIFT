@@ -48,21 +48,7 @@ KCM.SimpleKCM {
                 }
             }
 
-            FormCard.FormDelegateSeparator { above: shellVibrationsButton; below: animationsSwitch }
-
-            FormCard.FormSwitchDelegate {
-                id: autoHidePanels
-                text: i18n("Auto Hide Panels")
-                description: i18n("Auto-hide the status and navigation panels to allow applications to always be in fullscreen.")
-                checked: ShellSettings.Settings.autoHidePanelsEnabled
-                onCheckedChanged: {
-                    if (checked != ShellSettings.Settings.autoHidePanelsEnabled) {
-                        ShellSettings.Settings.autoHidePanelsEnabled = checked;
-                    }
-                }
-            }
-
-            FormCard.FormDelegateSeparator { above: autoHidePanels; below: doubleTapWakeup }
+            FormCard.FormDelegateSeparator { above: animationsSwitch; below: doubleTapWakeup }
 
             FormCard.FormSwitchDelegate {
                 id: doubleTapWakeup
@@ -72,6 +58,70 @@ KCM.SimpleKCM {
                 onCheckedChanged: {
                     if (checked != ShellSettings.KWinSettings.doubleTapWakeup) {
                         ShellSettings.KWinSettings.doubleTapWakeup = checked;
+                    }
+                }
+            }
+        }
+
+        FormCard.FormHeader {
+            title: i18n("Convergence")
+        }
+
+        FormCard.FormCard {
+            FormCard.FormSwitchDelegate {
+                id: convergenceModeSwitch
+                text: i18n("Convergence Mode")
+                description: i18n("Use desktop-style window placement, titlebar controls, Overview, and the dock.")
+                checked: ShellSettings.Settings.convergenceModeEnabled
+                onCheckedChanged: {
+                    if (checked != ShellSettings.Settings.convergenceModeEnabled) {
+                        ShellSettings.Settings.convergenceModeEnabled = checked;
+                    }
+                }
+            }
+
+            FormCard.FormDelegateSeparator { above: convergenceModeSwitch; below: dynamicTilingSwitch }
+
+            FormCard.FormSwitchDelegate {
+                id: dynamicTilingSwitch
+                text: i18n("Dynamic Tiling")
+                description: i18n("Automatically arrange windows in convergence mode. Disabled while convergence mode is off or gaming mode is active.")
+                enabled: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
+                checked: ShellSettings.Settings.dynamicTilingEnabled
+                onCheckedChanged: {
+                    if (checked != ShellSettings.Settings.dynamicTilingEnabled) {
+                        ShellSettings.Settings.dynamicTilingEnabled = checked;
+                    }
+                }
+            }
+
+            FormCard.FormDelegateSeparator { above: dynamicTilingSwitch; below: snapLayoutsSwitch }
+
+            FormCard.FormSwitchDelegate {
+                id: snapLayoutsSwitch
+                text: i18n("Snap Layouts")
+                description: i18n("Show the snap layout picker from the maximize button. Disabled while convergence mode is off, gaming mode is active, or dynamic tiling is enabled.")
+                enabled: ShellSettings.Settings.convergenceModeEnabled
+                         && !ShellSettings.Settings.gamingModeEnabled
+                         && !ShellSettings.Settings.dynamicTilingEnabled
+                checked: ShellSettings.Settings.snapLayoutsEnabled
+                onCheckedChanged: {
+                    if (checked != ShellSettings.Settings.snapLayoutsEnabled) {
+                        ShellSettings.Settings.snapLayoutsEnabled = checked;
+                    }
+                }
+            }
+
+            FormCard.FormDelegateSeparator { above: snapLayoutsSwitch; below: autoHidePanels }
+
+            FormCard.FormSwitchDelegate {
+                id: autoHidePanels
+                text: i18n("Auto Hide Panels")
+                description: i18n("Allow maximized or fullscreen applications to reclaim panel and dock space.")
+                checked: ShellSettings.Settings.autoHidePanelsEnabled
+                onCheckedChanged: {
+                    if (checked != ShellSettings.Settings.autoHidePanelsEnabled) {
+                        ShellSettings.Settings.autoHidePanelsEnabled = checked;
                     }
                 }
             }

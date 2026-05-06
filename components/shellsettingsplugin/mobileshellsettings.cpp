@@ -47,6 +47,7 @@ MobileShellSettings::MobileShellSettings(QObject *parent)
             Q_EMIT gamingModeEnabledChanged();
             Q_EMIT gamingDismissHintEnabledChanged();
             Q_EMIT dynamicTilingEnabledChanged();
+            Q_EMIT snapLayoutsEnabledChanged();
             Q_EMIT allowLogoutChanged();
         }
         if (group.name() == LOCKSCREEN_CONFIG_GROUP) {
@@ -287,6 +288,19 @@ void MobileShellSettings::setDynamicTilingEnabled(bool enabled)
 {
     auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
     group.writeEntry("dynamicTilingEnabled", enabled, KConfigGroup::Notify);
+    m_config->sync();
+}
+
+bool MobileShellSettings::snapLayoutsEnabled() const
+{
+    auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
+    return group.readEntry("snapLayoutsEnabled", true);
+}
+
+void MobileShellSettings::setSnapLayoutsEnabled(bool enabled)
+{
+    auto group = KConfigGroup{m_config, GENERAL_CONFIG_GROUP};
+    group.writeEntry("snapLayoutsEnabled", enabled, KConfigGroup::Notify);
     m_config->sync();
 }
 

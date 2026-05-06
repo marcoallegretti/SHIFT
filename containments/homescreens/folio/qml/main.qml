@@ -276,7 +276,10 @@ ContainmentItem {
     // task panel containment; this window only provides the visible dock.
     Window {
         id: dockOverlay
-        visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
+        readonly property bool active: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
+
+        visible: active
+        opacity: active ? 1 : 0
         color: "transparent"
         width: Screen.width
         height: MobileShell.Constants.convergenceDockHeight
@@ -284,7 +287,7 @@ ContainmentItem {
         LayerShell.Window.scope: "dock-overlay"
         LayerShell.Window.layer: LayerShell.Window.LayerTop
         LayerShell.Window.anchors: LayerShell.Window.AnchorBottom | LayerShell.Window.AnchorLeft | LayerShell.Window.AnchorRight
-        LayerShell.Window.exclusionZone: -1
+        LayerShell.Window.exclusionZone: shouldReserveSpace ? dockHeight : -1
         LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityOnDemand
 
         // Auto-hide: slide dock content off-screen when a window is
@@ -301,6 +304,25 @@ ContainmentItem {
 
         readonly property bool shouldHide: ShellSettings.Settings.autoHidePanelsEnabled
                                               && windowMaximizedTracker.showingWindow && !hoverRevealing
+        readonly property bool shouldReserveSpace: ShellSettings.Settings.autoHidePanelsEnabled
+                                                   && windowMaximizedTracker.showingWindow && hoverRevealing
+
+        function updateInputRegion() {
+            if (shouldHide && dockOffset >= dockHeight) {
+                MobileShell.ShellUtil.setInputRegion(dockOverlay,
+                    Qt.rect(0, dockOverlay.height - revealStripHeight,
+                            dockOverlay.width, revealStripHeight))
+            } else {
+                MobileShell.ShellUtil.setInputRegion(dockOverlay, Qt.rect(0, 0, 0, 0))
+            }
+        }
+
+        onActiveChanged: {
+            hoverRevealTimer.stop()
+            hoverRevealing = false
+            dockOffset = shouldHide ? dockHeight : 0
+            updateInputRegion()
+        }
 
         onShouldHideChanged: {
             if (shouldHide) {
@@ -308,26 +330,23 @@ ContainmentItem {
             } else {
                 dockOffset = 0
             }
+            updateInputRegion()
         }
 
         // Narrow the input region to a strip at the screen edge when hidden
         // so that app controls near the bottom edge are not accidentally
         // intercepted.  Mirrors the same pattern used by NavigationPanel.
         onDockOffsetChanged: {
-            if (dockOffset >= dockHeight) {
-                MobileShell.ShellUtil.setInputRegion(dockOverlay,
-                    Qt.rect(0, dockOverlay.height - revealStripHeight,
-                            dockOverlay.width, revealStripHeight))
-            } else if (dockOffset === 0) {
-                MobileShell.ShellUtil.setInputRegion(dockOverlay, Qt.rect(0, 0, 0, 0))
-            }
+            updateInputRegion()
         }
+        onWidthChanged: updateInputRegion()
+        onHeightChanged: updateInputRegion()
 
-        // Delay reveal by 300 ms so a quick edge graze does not pop the
+        // Delay reveal briefly so a quick edge graze does not pop the
         // dock up mid-interaction with the underlying application.
         Timer {
             id: hoverRevealTimer
-            interval: 300
+            interval: Kirigami.Units.shortDuration
             repeat: false
             onTriggered: dockOverlay.hoverRevealing = true
         }
@@ -346,9 +365,13 @@ ContainmentItem {
 
         Behavior on dockOffset {
             NumberAnimation {
-                easing.type: dockOverlay.shouldHide ? Easing.InExpo : Easing.OutExpo
+                easing.type: Easing.InOutCubic
                 duration: Kirigami.Units.longDuration
             }
+        }
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
         }
 
         Rectangle {

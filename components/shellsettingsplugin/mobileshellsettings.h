@@ -60,6 +60,9 @@ class MobileShellSettings : public QObject
     // When false, KWin's native quick-tile behaviour is used unmodified.
     Q_PROPERTY(bool dynamicTilingEnabled READ dynamicTilingEnabled WRITE setDynamicTilingEnabled NOTIFY dynamicTilingEnabledChanged)
 
+    // Snap layout picker — only meaningful in convergence mode when dynamic tiling is off.
+    Q_PROPERTY(bool snapLayoutsEnabled READ snapLayoutsEnabled WRITE setSnapLayoutsEnabled NOTIFY snapLayoutsEnabledChanged)
+
     // logout dialog
     Q_PROPERTY(bool allowLogout READ allowLogout READ allowLogout NOTIFY allowLogoutChanged)
 
@@ -287,6 +290,14 @@ public:
     void setDynamicTilingEnabled(bool enabled);
 
     /**
+     * Whether the SHIFT snap layout picker is enabled.
+     * Defaults to true; only takes effect in convergence mode when gaming mode
+     * and dynamic tiling are off.
+     */
+    bool snapLayoutsEnabled() const;
+    void setSnapLayoutsEnabled(bool enabled);
+
+    /**
      * Whether logout button is shown in the logout/shutdown dialog.
      */
     bool allowLogout() const;
@@ -335,6 +346,7 @@ Q_SIGNALS:
     void gamingModeEnabledChanged();
     void gamingDismissHintEnabledChanged();
     void dynamicTilingEnabledChanged();
+    void snapLayoutsEnabledChanged();
     void allowLogoutChanged();
     void lockscreenLeftButtonActionChanged();
     void lockscreenRightButtonActionChanged();
