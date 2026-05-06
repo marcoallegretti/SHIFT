@@ -95,7 +95,24 @@ KCM.SimpleKCM {
                 }
             }
 
-            FormCard.FormDelegateSeparator { above: dynamicTilingSwitch; below: autoHidePanels }
+            FormCard.FormDelegateSeparator { above: dynamicTilingSwitch; below: snapLayoutsSwitch }
+
+            FormCard.FormSwitchDelegate {
+                id: snapLayoutsSwitch
+                text: i18n("Snap Layouts")
+                description: i18n("Show the snap layout picker from the maximize button. Disabled while convergence mode is off, gaming mode is active, or dynamic tiling is enabled.")
+                enabled: ShellSettings.Settings.convergenceModeEnabled
+                         && !ShellSettings.Settings.gamingModeEnabled
+                         && !ShellSettings.Settings.dynamicTilingEnabled
+                checked: ShellSettings.Settings.snapLayoutsEnabled
+                onCheckedChanged: {
+                    if (checked != ShellSettings.Settings.snapLayoutsEnabled) {
+                        ShellSettings.Settings.snapLayoutsEnabled = checked;
+                    }
+                }
+            }
+
+            FormCard.FormDelegateSeparator { above: snapLayoutsSwitch; below: autoHidePanels }
 
             FormCard.FormSwitchDelegate {
                 id: autoHidePanels
