@@ -102,6 +102,34 @@ MouseArea {
         return i18n("Desktop %1", index + 1)
     }
 
+    function pagerDesktopNameForId(desktopId) {
+        let ids = virtualDesktopInfo.desktopIds
+        if (!ids) {
+            return ""
+        }
+        for (let i = 0; i < ids.length; ++i) {
+            if (String(ids[i]) === String(desktopId)) {
+                return root.pagerDesktopName(i)
+            }
+        }
+        return ""
+    }
+
+    function menuDesktopIds(isOnAllDesktops) {
+        let ids = virtualDesktopInfo.desktopIds
+        if (!ids || ids.length <= 1) {
+            return []
+        }
+
+        let result = []
+        for (let i = 0; i < ids.length; ++i) {
+            if (isOnAllDesktops || String(ids[i]) !== String(virtualDesktopInfo.currentDesktop)) {
+                result.push(ids[i])
+            }
+        }
+        return result
+    }
+
     // Returns the desktop ID of the pager button under screen-space x, or ""
     function pagerButtonDesktopAt(x) {
         if (!showPager) return ""
@@ -1228,6 +1256,10 @@ MouseArea {
 
             readonly property bool isLocationBottom: folio.HomeScreenState.favouritesBarLocation === Folio.HomeScreenState.Bottom
             readonly property string taskStorageId: root.runningTaskStorageId(taskDelegate.model)
+            readonly property bool isGroupParent: taskDelegate.model.IsGroupParent === true
+            readonly property bool dynamicTilingActive: root.convergenceMode && ShellSettings.Settings.dynamicTilingEnabled
+            readonly property bool showFreeGeometryActions: !taskDelegate.isGroupParent && !taskDelegate.dynamicTilingActive
+            readonly property bool canChangeVirtualDesktops: taskDelegate.model.IsVirtualDesktopsChangeable === true
 
             Accessible.role: Accessible.Button
             Accessible.name: taskDelegate.model.display || ""
@@ -1431,23 +1463,79 @@ MouseArea {
                 popupType: T.Popup.Window
 
                 PC3.MenuItem {
+                    icon.name: "window-new"
+                    text: i18n("Open New Window")
+                    visible: taskDelegate.model.CanLaunchNewInstance === true
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestNewInstance(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
                     icon.name: "window-pin"
                     text: i18n("Pin to Dock")
                     // repeater.count dependency forces re-evaluation when favourites change
                     visible: taskDelegate.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId)
+                    height: visible ? implicitHeight : 0
                     enabled: !folio.FolioSettings.lockLayout
                     onClicked: folio.FavouritesModel.addApplication(taskDelegate.taskStorageId)
+                }
+
+                Controls.MenuSeparator {
+                    visible: taskDelegate.model.CanLaunchNewInstance === true
+                             || (taskDelegate.taskStorageId !== "" && repeater.count >= 0 && !folio.FavouritesModel.containsApplication(taskDelegate.taskStorageId))
+                    height: visible ? implicitHeight : 0
+                }
+
+                PC3.MenuItem {
+                    icon.name: "transform-move"
+                    text: i18n("Move")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsMovable === true
+                    onClicked: tasksModel.requestMove(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "transform-scale"
+                    text: i18n("Resize")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsResizable === true
+                    onClicked: tasksModel.requestResize(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMinimized ? "window-restore" : "window-minimize"
                     text: taskDelegate.model.IsMinimized ? i18n("Restore") : i18n("Minimize")
+                    enabled: taskDelegate.model.IsMinimizable === true
                     onClicked: tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: taskDelegate.model.IsMaximized ? "window-restore" : "window-maximize"
                     text: taskDelegate.model.IsMaximized ? i18n("Restore") : i18n("Maximize")
-                    visible: taskDelegate.model.IsGroupParent !== true
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsMaximizable === true
                     onClicked: tasksModel.requestToggleMaximized(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "window-keep-above"
+                    text: taskDelegate.model.IsKeepAbove ? i18n("Do Not Keep Above Others") : i18n("Keep Above Others")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestToggleKeepAbove(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "window-keep-below"
+                    text: taskDelegate.model.IsKeepBelow ? i18n("Do Not Keep Below Others") : i18n("Keep Below Others")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestToggleKeepBelow(tasksModel.makeModelIndex(taskDelegate.index))
+                }
+                PC3.MenuItem {
+                    icon.name: "view-fullscreen"
+                    text: taskDelegate.model.IsFullScreen ? i18n("Leave Fullscreen") : i18n("Fullscreen")
+                    visible: taskDelegate.showFreeGeometryActions
+                    height: visible ? implicitHeight : 0
+                    enabled: taskDelegate.model.IsFullScreenable === true
+                    onClicked: tasksModel.requestToggleFullScreen(tasksModel.makeModelIndex(taskDelegate.index))
                 }
                 PC3.MenuItem {
                     icon.name: "window-close"
@@ -1455,26 +1543,41 @@ MouseArea {
                         var ids = taskDelegate.model.WinIdList
                         return (ids && ids.length > 1) ? i18n("Close All") : i18n("Close")
                     }
+                    enabled: taskDelegate.model.IsClosable === true
                     onClicked: tasksModel.requestClose(tasksModel.makeModelIndex(taskDelegate.index))
                 }
 
                 Controls.MenuSeparator {
-                    visible: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
+                    visible: taskDelegate.canChangeVirtualDesktops
+                    height: visible ? implicitHeight : 0
+                }
+
+                PC3.MenuItem {
+                    icon.name: "virtual-desktops"
+                    text: taskDelegate.model.IsOnAllVirtualDesktops ? i18n("Show Only on Current Desktop") : i18n("Show on All Desktops")
+                    visible: taskDelegate.canChangeVirtualDesktops && virtualDesktopInfo.numberOfDesktops > 1
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestVirtualDesktops(tasksModel.makeModelIndex(taskDelegate.index),
+                        taskDelegate.model.IsOnAllVirtualDesktops ? [virtualDesktopInfo.currentDesktop] : [])
                 }
 
                 Instantiator {
-                    model: root.showPager && taskDelegate.model.IsVirtualDesktopsChangeable === true
-                           ? virtualDesktopInfo.desktopIds : []
+                    model: root.showPager && taskDelegate.canChangeVirtualDesktops ? root.menuDesktopIds(taskDelegate.model.IsOnAllVirtualDesktops === true) : []
                     delegate: PC3.MenuItem {
-                        required property int index
                         required property var modelData
-                        text: i18n("Move to %1", root.pagerDesktopName(index))
-                        enabled: String(modelData) !== String(virtualDesktopInfo.currentDesktop)
+                        text: i18n("Move to %1", root.pagerDesktopNameForId(modelData))
                         onTriggered: tasksModel.requestVirtualDesktops(
                             tasksModel.makeModelIndex(taskDelegate.index), [modelData])
                     }
                     onObjectAdded: (idx, obj) => taskContextMenu.insertItem(taskContextMenu.count, obj)
                     onObjectRemoved: (idx, obj) => taskContextMenu.removeItem(obj)
+                }
+                PC3.MenuItem {
+                    icon.name: "list-add"
+                    text: i18n("Move to New Desktop")
+                    visible: taskDelegate.canChangeVirtualDesktops
+                    height: visible ? implicitHeight : 0
+                    onClicked: tasksModel.requestNewVirtualDesktop(tasksModel.makeModelIndex(taskDelegate.index))
                 }
             }
         }
