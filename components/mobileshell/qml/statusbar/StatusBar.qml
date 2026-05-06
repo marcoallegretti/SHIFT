@@ -36,6 +36,10 @@ Item {
      */
     property color backgroundColor: "transparent"
 
+    Behavior on backgroundColor {
+        ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+    }
+
     /**
      * Whether to show a second row of the status bar, with more information.
      */
@@ -93,7 +97,12 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
-                visible: ShellSettings.Settings.convergenceModeEnabled && statusBarHover.hovered
+                visible: opacity > 0
+                opacity: ShellSettings.Settings.convergenceModeEnabled && statusBarHover.hovered ? 1 : 0
+
+                Behavior on opacity {
+                    NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+                }
             }
 
             HoverHandler {
@@ -223,8 +232,8 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Kirigami.Units.smallSpacing
 
-        visible: ShellSettings.Settings.convergenceModeEnabled
-        opacity: statusBarHover.hovered ? 0.6 : 0.2
+        visible: ShellSettings.Settings.convergenceModeEnabled || opacity > 0
+        opacity: ShellSettings.Settings.convergenceModeEnabled ? (statusBarHover.hovered ? 0.6 : 0.2) : 0
 
         Behavior on opacity {
             NumberAnimation { duration: Kirigami.Units.shortDuration }

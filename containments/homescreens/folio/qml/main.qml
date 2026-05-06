@@ -276,7 +276,10 @@ ContainmentItem {
     // task panel containment; this window only provides the visible dock.
     Window {
         id: dockOverlay
-        visible: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
+        readonly property bool active: ShellSettings.Settings.convergenceModeEnabled && !ShellSettings.Settings.gamingModeEnabled
+
+        visible: active
+        opacity: active ? 1 : 0
         color: "transparent"
         width: Screen.width
         height: MobileShell.Constants.convergenceDockHeight
@@ -346,9 +349,13 @@ ContainmentItem {
 
         Behavior on dockOffset {
             NumberAnimation {
-                easing.type: dockOverlay.shouldHide ? Easing.InExpo : Easing.OutExpo
+                easing.type: Easing.InOutCubic
                 duration: Kirigami.Units.longDuration
             }
+        }
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
         }
 
         Rectangle {

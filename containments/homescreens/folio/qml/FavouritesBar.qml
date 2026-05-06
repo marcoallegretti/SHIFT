@@ -36,13 +36,18 @@ MouseArea {
     readonly property int totalItemCount: repeater.count + (showRunningTasks ? taskRepeater.count : 0)
 
     // In convergence mode, size icons to fit the dock bar instead of using page grid cells
-    readonly property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
-    readonly property real dockCellHeight: convergenceMode ? root.height : folio.HomeScreenState.pageCellHeight
+    property real dockCellWidth: convergenceMode ? root.height : folio.HomeScreenState.pageCellWidth
+    property real dockCellHeight: convergenceMode ? root.height : folio.HomeScreenState.pageCellHeight
+    Behavior on dockCellWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockCellHeight { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     // Navigation buttons width (used to offset center positioning)
-    readonly property real navButtonWidth: convergenceMode ? root.height : 0
-    readonly property real dockItemInset: convergenceMode ? Math.max(2, Kirigami.Units.smallSpacing / 2) : 0
-    readonly property real dockIconSize: Math.min(root.height * 0.56, Kirigami.Units.iconSizes.large)
+    property real navButtonWidth: convergenceMode ? root.height : 0
+    property real dockItemInset: convergenceMode ? Math.max(2, Kirigami.Units.smallSpacing / 2) : 0
+    property real dockIconSize: Math.min(root.height * 0.56, Kirigami.Units.iconSizes.large)
+    Behavior on navButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockItemInset { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on dockIconSize { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     function dockItemColor(pressed, hovered, active) {
         if (pressed) {
@@ -90,10 +95,12 @@ MouseArea {
 
     // Virtual desktop pager (convergence mode, 2+ desktops)
     readonly property bool showPager: convergenceMode && virtualDesktopInfo.numberOfDesktops > 1
-    readonly property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
+    property real pagerButtonWidth: showPager ? Math.min(root.height, Kirigami.Units.gridUnit * 2.5) : 0
     readonly property int pagerLeftCount: showPager ? Math.ceil(virtualDesktopInfo.numberOfDesktops / 2) : 0
     readonly property int pagerRightCount: showPager ? virtualDesktopInfo.numberOfDesktops - pagerLeftCount : 0
-    readonly property real trashButtonWidth: convergenceMode ? root.height : 0
+    property real trashButtonWidth: convergenceMode ? root.height : 0
+    Behavior on pagerButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on trashButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     function pagerDesktopName(index) {
         let names = virtualDesktopInfo.desktopNames
@@ -204,13 +211,19 @@ MouseArea {
     // Home button (convergence mode, left end)
     Rectangle {
         id: homeButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Home")
@@ -263,13 +276,19 @@ MouseArea {
     // Overview button (convergence mode, right end)
     Rectangle {
         id: overviewButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.navButtonWidth
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Overview")
@@ -480,13 +499,19 @@ MouseArea {
 
     Rectangle {
         id: trashButton
-        visible: root.convergenceMode
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
         x: root.width - root.navButtonWidth - root.trashButtonWidth
         y: 0
         width: root.trashButtonWidth
         height: root.height
         color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
 
         Accessible.role: Accessible.Button
         Accessible.name: i18n("Trash")
