@@ -442,6 +442,14 @@ KWinComponents.SceneEffect {
                                           + snapPanelHorizontalPadding
     readonly property int snapPanelHeight: snapButtonHeight + snapPanelVerticalPadding + 23
 
+    function accentColor(alpha) {
+        return Qt.rgba(46 / 255, 184 / 255, 168 / 255, alpha);
+    }
+
+    function accentPaleColor(alpha) {
+        return Qt.rgba(163 / 255, 218 / 255, 212 / 255, alpha);
+    }
+
     // Apply a zone (in relative coords) to a window given a work area rect.
     function applyZone(win, zone, area) {
         const g = effect.outerGap;
@@ -515,11 +523,11 @@ KWinComponents.SceneEffect {
                 height: Math.max(1, Math.round(modelData.h * effect.previewArea.height) - 2 * previewGap)
                 z: activeZone ? 90001 : 90000
                 radius: 6
-                color: activeZone ? Qt.rgba(0.38, 0.60, 0.98, 0.24)
-                                  : Qt.rgba(0.88, 0.92, 1.0, 0.08)
+                color: activeZone ? effect.accentColor(0.24)
+                                  : effect.accentPaleColor(0.08)
                 border.width: activeZone ? 2 : 1
-                border.color: activeZone ? Qt.rgba(0.70, 0.82, 1.0, 0.78)
-                                         : Qt.rgba(0.86, 0.90, 1.0, 0.26)
+                border.color: activeZone ? effect.accentPaleColor(0.78)
+                                         : effect.accentPaleColor(0.26)
             }
         }
 
@@ -588,7 +596,7 @@ KWinComponents.SceneEffect {
 
             Text {
                 text: "Snap layouts"
-                color: "#b0b8d4"
+                color: effect.accentPaleColor(0.9)
                 font.pixelSize: 10
                 font.capitalization: Font.AllUppercase
             }
@@ -630,7 +638,7 @@ KWinComponents.SceneEffect {
         color: hovered ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.08)
         radius: 6
         border.width: 1
-        border.color: hovered ? Qt.rgba(0.66, 0.78, 1.0, 0.62) : Qt.rgba(1, 1, 1, 0.14)
+        border.color: hovered ? effect.accentPaleColor(0.62) : Qt.rgba(1, 1, 1, 0.14)
 
         property bool hovered: false
 
@@ -657,9 +665,9 @@ KWinComponents.SceneEffect {
                     y: Math.round(modelData.y * previewFrame.height)
                     width: Math.max(4, Math.round(modelData.w * previewFrame.width) - 1)
                     height: Math.max(4, Math.round(modelData.h * previewFrame.height) - 1)
-                    color: zoneHover.hovered ? Qt.rgba(0.78, 0.86, 1.0, 0.96)
-                                             : (index === 0 ? Qt.rgba(0.46, 0.64, 0.96, 0.96)
-                                                           : Qt.rgba(0.58, 0.68, 0.86, 0.48))
+                    color: zoneHover.hovered ? effect.accentPaleColor(0.96)
+                                             : (index === 0 ? effect.accentColor(0.96)
+                                                           : effect.accentPaleColor(0.48))
                     border.width: 0
                     radius: 2
 
