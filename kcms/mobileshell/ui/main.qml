@@ -10,6 +10,7 @@ import QtQuick.Controls 2.15 as QQC2
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
 import org.kde.kirigamiaddons.formcard 1.0 as FormCard
+import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 KCM.SimpleKCM {
@@ -21,6 +22,10 @@ KCM.SimpleKCM {
     bottomPadding: 0
     leftPadding: 0
     rightPadding: 0
+
+    function openSettingsModule(moduleName) {
+        MobileShell.ShellUtil.executeCommand("plasma-open-settings " + moduleName);
+    }
 
     ColumnLayout {
         FormCard.FormHeader {
@@ -124,6 +129,136 @@ KCM.SimpleKCM {
                         ShellSettings.Settings.autoHidePanelsEnabled = checked;
                     }
                 }
+            }
+
+            FormCard.FormDelegateSeparator { above: autoHidePanels; below: displayConfigurationButton }
+
+            FormCard.FormButtonDelegate {
+                id: displayConfigurationButton
+                icon.name: "preferences-desktop-display-randr"
+                text: i18n("Display Configuration")
+                onClicked: root.openSettingsModule("kcm_kscreen")
+            }
+
+            FormCard.FormDelegateSeparator { above: displayConfigurationButton; below: networkingButton }
+
+            FormCard.FormButtonDelegate {
+                id: networkingButton
+                icon.name: "preferences-system-network"
+                text: i18n("Wi-Fi & Networking")
+                onClicked: root.openSettingsModule("kcm_networkmanagement")
+            }
+
+            FormCard.FormDelegateSeparator { above: networkingButton; below: soundButton }
+
+            FormCard.FormButtonDelegate {
+                id: soundButton
+                icon.name: "preferences-desktop-sound"
+                text: i18n("Sound")
+                onClicked: root.openSettingsModule("kcm_pulseaudio")
+            }
+
+            FormCard.FormDelegateSeparator { above: soundButton; below: shortcutsButton }
+
+            FormCard.FormButtonDelegate {
+                id: shortcutsButton
+                icon.name: "preferences-desktop-keyboard-shortcut"
+                text: i18n("Shortcuts")
+                onClicked: root.openSettingsModule("kcm_keys")
+            }
+
+            FormCard.FormDelegateSeparator { above: shortcutsButton; below: accessibilityButton }
+
+            FormCard.FormButtonDelegate {
+                id: accessibilityButton
+                icon.name: "preferences-desktop-accessibility"
+                text: i18n("Accessibility")
+                onClicked: root.openSettingsModule("kcm_access")
+            }
+
+            FormCard.FormDelegateSeparator { above: accessibilityButton; below: notificationsButton }
+
+            FormCard.FormButtonDelegate {
+                id: notificationsButton
+                icon.name: "preferences-desktop-notification-bell"
+                text: i18n("Notifications")
+                onClicked: root.openSettingsModule("kcm_notifications")
+            }
+
+            FormCard.FormDelegateSeparator { above: notificationsButton; below: screenLockingButton }
+
+            FormCard.FormButtonDelegate {
+                id: screenLockingButton
+                icon.name: "preferences-desktop-user-password"
+                text: i18n("Screen Locking")
+                onClicked: root.openSettingsModule("kcm_screenlocker")
+            }
+
+            FormCard.FormDelegateSeparator { above: screenLockingButton; below: virtualKeyboardButton }
+
+            FormCard.FormButtonDelegate {
+                id: virtualKeyboardButton
+                icon.name: "input-keyboard-virtual"
+                text: i18n("Virtual Keyboard")
+                onClicked: root.openSettingsModule("kcm_virtualkeyboard")
+            }
+        }
+
+        FormCard.FormHeader {
+            title: i18n("Desktop Workspace")
+        }
+
+        FormCard.FormCard {
+            FormCard.FormButtonDelegate {
+                id: virtualDesktopsButton
+                icon.name: "preferences-desktop-virtual"
+                text: i18n("Virtual Desktops")
+                onClicked: root.openSettingsModule("kcm_kwin_virtualdesktops")
+            }
+
+            FormCard.FormDelegateSeparator { above: virtualDesktopsButton; below: windowBehaviorButton }
+
+            FormCard.FormButtonDelegate {
+                id: windowBehaviorButton
+                icon.name: "preferences-system-windows-actions"
+                text: i18n("Window Behavior")
+                onClicked: root.openSettingsModule("kcm_kwinoptions")
+            }
+
+            FormCard.FormDelegateSeparator { above: windowBehaviorButton; below: windowRulesButton }
+
+            FormCard.FormButtonDelegate {
+                id: windowRulesButton
+                icon.name: "preferences-system-windows-actions"
+                text: i18n("Window Rules")
+                onClicked: root.openSettingsModule("kcm_kwinrules")
+            }
+
+            FormCard.FormDelegateSeparator { above: windowRulesButton; below: taskSwitcherButton }
+
+            FormCard.FormButtonDelegate {
+                id: taskSwitcherButton
+                icon.name: "preferences-system-tabbox"
+                text: i18n("Task Switcher")
+                onClicked: root.openSettingsModule("kcm_kwintabbox")
+            }
+
+            FormCard.FormDelegateSeparator { above: taskSwitcherButton; below: desktopEffectsButton }
+
+            FormCard.FormButtonDelegate {
+                id: desktopEffectsButton
+                icon.name: "preferences-desktop-effects"
+                text: i18n("Desktop Effects")
+                onClicked: root.openSettingsModule("kcm_kwin_effects")
+            }
+
+            FormCard.FormDelegateSeparator { above: desktopEffectsButton; below: windowDecorationsButton }
+
+            FormCard.FormButtonDelegate {
+                id: windowDecorationsButton
+                icon.name: "preferences-desktop-theme-windowdecorations"
+                text: i18n("Window Decorations")
+                onClicked: root.openSettingsModule("kcm_kwindecoration")
             }
         }
 
