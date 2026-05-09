@@ -55,6 +55,16 @@ QQC2.Popup {
         popup.open();
     }
 
+    Connections {
+        target: MobileShell.AppletHost
+
+        function onAppletReady(pluginId) {
+            if (pluginId === popup.currentPluginId && !popup.opened) {
+                popup.show(pluginId);
+            }
+        }
+    }
+
     onClosed: {
         if (__currentItem) {
             __currentItem.visible = false;
