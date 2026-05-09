@@ -141,6 +141,7 @@ ecm_target_qml_sources(mobileshellplugin SOURCES
     qml/actiondrawer/private/QuickSettingsPanel.qml
     qml/actiondrawer/private/ContentContainer.qml
     qml/actiondrawer/private/DetailPopup.qml
+    qml/actiondrawer/private/SystemTrayPopup.qml
     qml/actiondrawer/private/LandscapeContentContainer.qml
     qml/actiondrawer/private/NotificationDrawer.qml
     qml/actiondrawer/private/PortraitContentContainer.qml

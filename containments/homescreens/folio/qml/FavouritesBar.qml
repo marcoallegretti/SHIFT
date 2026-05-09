@@ -62,11 +62,6 @@ MouseArea {
         return "transparent"
     }
 
-    // Center x for dock items (offset between nav buttons in convergence mode)
-    readonly property real dockCenterX: convergenceMode
-        ? navButtonWidth + (root.width - 2 * navButtonWidth) / 2
-        : root.width / 2
-
     // Visible spacer between pinned favourites and running tasks
     readonly property bool showSpacer: showRunningTasks && repeater.count > 0 && taskRepeater.count > 0
     property real spacerWidth: showSpacer ? Kirigami.Units.largeSpacing * 2 : 0
@@ -99,8 +94,15 @@ MouseArea {
     readonly property int pagerLeftCount: showPager ? Math.ceil(virtualDesktopInfo.numberOfDesktops / 2) : 0
     readonly property int pagerRightCount: showPager ? virtualDesktopInfo.numberOfDesktops - pagerLeftCount : 0
     property real trashButtonWidth: convergenceMode ? root.height : 0
+    property real searchButtonWidth: convergenceMode ? root.height : 0
+    readonly property real leftControlsWidth: convergenceMode ? navButtonWidth + pagerLeftCount * pagerButtonWidth : 0
+    readonly property real rightControlsWidth: convergenceMode ? navButtonWidth + searchButtonWidth + trashButtonWidth + pagerRightCount * pagerButtonWidth : 0
+    readonly property real dockCenterX: convergenceMode
+        ? leftControlsWidth + (root.width - leftControlsWidth - rightControlsWidth) / 2
+        : root.width / 2
     Behavior on pagerButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
     Behavior on trashButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
+    Behavior on searchButtonWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.InOutCubic } }
 
     function pagerDesktopName(index) {
         let names = virtualDesktopInfo.desktopNames
@@ -147,7 +149,7 @@ MouseArea {
                 return (ids && i < ids.length) ? String(ids[i]) : ""
         }
         for (let i = 0; i < pagerRightCount; ++i) {
-            let bx = root.width - navButtonWidth - root.trashButtonWidth - (pagerRightCount - i) * pagerButtonWidth
+            let bx = root.width - navButtonWidth - root.searchButtonWidth - root.trashButtonWidth - (pagerRightCount - i) * pagerButtonWidth
             if (x >= bx && x < bx + pagerButtonWidth) {
                 let di = pagerLeftCount + i
                 return (ids && di < ids.length) ? String(ids[di]) : ""
@@ -237,7 +239,7 @@ MouseArea {
             if (first) { first.keyboardFocus(); return }
             let firstTask = taskRepeater.itemAt(0)
             if (firstTask) { firstTask.forceActiveFocus(); return }
-            overviewButton.forceActiveFocus()
+            searchButton.forceActiveFocus()
         }
 
         KeyboardHighlight {
@@ -298,11 +300,7 @@ MouseArea {
         Keys.onEnterPressed: root.folio.triggerOverview()
         Keys.onSpacePressed: root.folio.triggerOverview()
         Keys.onLeftPressed: {
-            let lastTask = taskRepeater.itemAt(taskRepeater.count - 1)
-            if (lastTask) { lastTask.forceActiveFocus(); return }
-            let lastFav = repeater.itemAt(repeater.count - 1)
-            if (lastFav) { lastFav.keyboardFocus(); return }
-            homeButton.forceActiveFocus()
+            searchButton.forceActiveFocus()
         }
 
         KeyboardHighlight {
@@ -335,6 +333,77 @@ MouseArea {
             hoverEnabled: true
             cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
             onClicked: root.folio.triggerOverview()
+        }
+    }
+
+    // Search button (convergence mode, immediately left of Overview)
+    Rectangle {
+        id: searchButton
+        visible: root.convergenceMode || opacity > 0
+        enabled: root.convergenceMode
+        opacity: root.convergenceMode ? 1 : 0
+        activeFocusOnTab: root.convergenceMode
+        x: root.width - root.navButtonWidth - root.searchButtonWidth
+        y: 0
+        width: root.searchButtonWidth
+        height: root.height
+        color: "transparent"
+
+        Behavior on opacity {
+            NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.InOutQuad }
+        }
+
+        Accessible.role: Accessible.Button
+        Accessible.name: i18n("Search")
+        Accessible.onPressAction: root.folio.HomeScreenState.openSearchWidget()
+
+        Keys.onReturnPressed: root.folio.HomeScreenState.openSearchWidget()
+        Keys.onEnterPressed: root.folio.HomeScreenState.openSearchWidget()
+        Keys.onSpacePressed: root.folio.HomeScreenState.openSearchWidget()
+        Keys.onLeftPressed: {
+            let lastTask = taskRepeater.itemAt(taskRepeater.count - 1)
+            if (lastTask) { lastTask.forceActiveFocus(); return }
+            let lastFav = repeater.itemAt(repeater.count - 1)
+            if (lastFav) { lastFav.keyboardFocus(); return }
+            homeButton.forceActiveFocus()
+        }
+        Keys.onRightPressed: overviewButton.forceActiveFocus()
+
+        KeyboardHighlight {
+            anchors.fill: parent
+            visible: searchButton.activeFocus
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: root.dockItemInset
+            radius: Kirigami.Units.cornerRadius
+            color: root.dockItemColor(searchMouseArea.containsPress, searchMouseArea.containsMouse, false)
+
+            Behavior on color {
+                ColorAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+            }
+        }
+
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: root.dockIconSize
+            height: width
+            source: "search"
+            active: searchMouseArea.containsMouse
+        }
+
+        PC3.ToolTip {
+            visible: searchMouseArea.containsMouse
+            text: i18n("Search")
+        }
+
+        MouseArea {
+            id: searchMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: root.convergenceMode ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: root.folio.HomeScreenState.openSearchWidget()
         }
     }
 
@@ -421,7 +490,7 @@ MouseArea {
                 return root.pagerButtonDesktopAt(cx) === desktopId
             }
 
-            x: root.width - root.navButtonWidth - root.trashButtonWidth - (root.pagerRightCount - index) * root.pagerButtonWidth
+            x: root.width - root.navButtonWidth - root.searchButtonWidth - root.trashButtonWidth - (root.pagerRightCount - index) * root.pagerButtonWidth
             y: 0
             width: root.pagerButtonWidth
             height: root.height
@@ -503,7 +572,7 @@ MouseArea {
         enabled: root.convergenceMode
         opacity: root.convergenceMode ? 1 : 0
         activeFocusOnTab: root.convergenceMode
-        x: root.width - root.navButtonWidth - root.trashButtonWidth
+        x: root.width - root.navButtonWidth - root.searchButtonWidth - root.trashButtonWidth
         y: 0
         width: root.trashButtonWidth
         height: root.height
@@ -747,7 +816,7 @@ MouseArea {
                             if (firstTask) {
                                 firstTask.forceActiveFocus();
                             } else {
-                                overviewButton.forceActiveFocus();
+                                searchButton.forceActiveFocus();
                             }
                             event.accepted = true;
                         }
@@ -1321,7 +1390,7 @@ MouseArea {
             Keys.onRightPressed: {
                 let next = taskRepeater.itemAt(taskDelegate.index + 1)
                 if (next) { next.forceActiveFocus(); return }
-                overviewButton.forceActiveFocus()
+                searchButton.forceActiveFocus()
             }
 
             // Position after all favourites

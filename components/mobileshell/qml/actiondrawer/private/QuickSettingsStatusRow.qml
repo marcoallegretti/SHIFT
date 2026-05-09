@@ -9,8 +9,7 @@ import org.kde.plasma.private.mobileshell as MobileShell
 import org.kde.plasma.private.mobileshell.shellsettingsplugin as ShellSettings
 
 /**
- * Full-width management row (Wi-Fi, Bluetooth, Audio, Battery) shown in
- * convergence mode.  Two interaction zones:
+ * Management/detail row shown in convergence mode. Two interaction zones:
  *   - Left toggle pill: icon + indicator dot, tap toggles the service.
  *   - Right detail area: name + status + chevron, tap opens detail popup.
  */
@@ -22,10 +21,11 @@ Item {
     required property string icon
     required property bool enabled
     required property var toggleFunction
+    property bool compact: false
 
     signal detailClicked()
 
-    implicitHeight: Kirigami.Units.gridUnit * 3.6
+    implicitHeight: Kirigami.Units.gridUnit * (compact ? 3.1 : 3.6)
 
     Kirigami.Theme.inherit: false
     Kirigami.Theme.colorSet: Kirigami.Theme.Button
@@ -35,6 +35,7 @@ Item {
     readonly property color enabledBgHover: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.32)
     readonly property color enabledBgPressed: mixColor(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.12)
     readonly property color enabledBorder: Qt.darker(Kirigami.Theme.highlightColor, 1.25)
+    readonly property bool hasToggle: toggleFunction !== null && toggleFunction !== undefined
 
     readonly property color disabledBg: Kirigami.Theme.alternateBackgroundColor
     readonly property color disabledBgHover: mixColor(Kirigami.Theme.alternateBackgroundColor, Kirigami.Theme.textColor, 0.06)
@@ -146,8 +147,10 @@ Item {
                 // Indicator bar
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
+                    visible: root.hasToggle
+                    Layout.preferredHeight: visible ? Math.max(2, Math.round(Kirigami.Units.devicePixelRatio)) : 0
                     width: root.enabled ? Kirigami.Units.smallSpacing * 3 : Kirigami.Units.smallSpacing * 1.5
-                    height: Math.max(2, Math.round(Kirigami.Units.devicePixelRatio))
+                    height: Layout.preferredHeight
                     radius: height / 2
                     color: root.enabled ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
                     opacity: root.enabled ? 1.0 : 0.4
@@ -162,10 +165,14 @@ Item {
                 id: toggleMouse
                 anchors.fill: parent
                 hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onPressed: haptics.buttonVibrate()
+                cursorShape: root.hasToggle ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onPressed: {
+                    if (root.hasToggle) {
+                        haptics.buttonVibrate()
+                    }
+                }
                 onClicked: {
-                    if (root.toggleFunction) root.toggleFunction();
+                    if (root.hasToggle) root.toggleFunction();
                 }
             }
         }

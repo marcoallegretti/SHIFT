@@ -46,9 +46,9 @@ Item {
     readonly property int columnCount: Math.floor(width/columnWidth)
     readonly property int rowCount: {
         let totalRows = Math.ceil(quickSettingsCount / columnCount);
-        let maxRows = 5; // more than 5 is just disorienting
-        let targetRows = Math.floor(Window.height * 0.65 / rowHeight);
-        return Math.min(maxRows, Math.min(totalRows, targetRows));
+        let maxRows = root.isConvergence ? 3 : 5; // more than 5 is just disorienting
+        let targetRows = Math.floor(Window.height * (root.isConvergence ? 0.42 : 0.65) / rowHeight);
+        return Math.max(1, Math.min(maxRows, Math.min(totalRows, targetRows)));
     }
 
     readonly property int pageSize: rowCount * columnCount
@@ -63,6 +63,10 @@ Item {
     })
     readonly property bool isConvergence: ShellSettings.Settings.convergenceModeEnabled
     function isManagementTile(cmd) { return cmd in __managementCommands; }
+    readonly property int promotedColumns: isConvergence && width >= Kirigami.Units.gridUnit * 18 ? 2 : 1
+    readonly property real promotedSpacing: Kirigami.Units.smallSpacing
+    readonly property real promotedHorizontalMargin: Kirigami.Units.smallSpacing
+    readonly property real promotedCellWidth: Math.floor((width - 2 * promotedHorizontalMargin - (promotedColumns - 1) * promotedSpacing) / promotedColumns)
 
     readonly property alias brightnessPressedValue: brightnessItem.brightnessPressedValue
 
@@ -136,21 +140,72 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        // Management status rows (convergence mode only)
-        ColumnLayout {
+        // Promoted desktop controls (convergence mode only)
+        GridLayout {
+            id: promotedGrid
             Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.smallSpacing
-            Layout.rightMargin: Kirigami.Units.smallSpacing
+            Layout.leftMargin: root.promotedHorizontalMargin
+            Layout.rightMargin: root.promotedHorizontalMargin
             Layout.bottomMargin: Kirigami.Units.smallSpacing
-            spacing: Kirigami.Units.smallSpacing
+            columns: root.promotedColumns
+            rowSpacing: root.promotedSpacing
+            columnSpacing: root.promotedSpacing
             visible: root.isConvergence
+
+            Repeater {
+                model: [
+                    {
+                        text: i18n("Clipboard"),
+                        status: i18n("History"),
+                        icon: "klipper-symbolic",
+                        pluginId: "org.kde.plasma.clipboard"
+                    },
+                    {
+                        text: i18n("Disks & Devices"),
+                        status: i18n("Removable media"),
+                        icon: "device-notifier-symbolic",
+                        pluginId: "org.kde.plasma.devicenotifier"
+                    },
+                    {
+                        text: i18n("System Tray"),
+                        status: systemTrayPopup.trayItemCount > 0 ? i18np("%1 status item", "%1 status items", systemTrayPopup.trayItemCount) : i18n("No status items"),
+                        icon: "preferences-desktop-notification-symbolic",
+                        trayPopup: true
+                    }
+                ]
+
+                delegate: QuickSettingsStatusRow {
+                    required property var modelData
+                    Layout.preferredWidth: root.promotedCellWidth
+                    Layout.fillWidth: true
+                    compact: true
+                    text: modelData.text
+                    status: modelData.status
+                    icon: modelData.icon
+                    enabled: false
+                    toggleFunction: null
+                    onDetailClicked: {
+                        if (modelData.trayPopup) {
+                            systemTrayPopup.show();
+                        } else {
+                            detailPopup.show(modelData.pluginId);
+                        }
+                    }
+                }
+            }
 
             Repeater {
                 model: root.quickSettingsModel
                 delegate: QuickSettingsStatusRow {
                     required property var modelData
+                    readonly property bool isPromoted: root.isManagementTile(modelData.settingsCommand)
+                    Layout.preferredWidth: isPromoted ? root.promotedCellWidth : 0
+                    Layout.preferredHeight: isPromoted ? implicitHeight : 0
+                    Layout.maximumWidth: isPromoted ? root.promotedCellWidth : 0
+                    Layout.maximumHeight: isPromoted ? implicitHeight : 0
                     Layout.fillWidth: true
-                    visible: root.isManagementTile(modelData.settingsCommand)
+                    visible: isPromoted
+                    compact: true
                     text: modelData.text
                     status: modelData.status
                     icon: modelData.icon
@@ -283,6 +338,11 @@ Item {
 
     DetailPopup {
         id: detailPopup
+        parent: root.Window.window ? root.Window.window.contentItem : root
+    }
+
+    SystemTrayPopup {
+        id: systemTrayPopup
         parent: root.Window.window ? root.Window.window.contentItem : root
     }
 
